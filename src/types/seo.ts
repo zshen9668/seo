@@ -62,6 +62,17 @@ export interface AuditIssue {
   recommendation: string;
   codeSnippet?: string;
   isResolved: boolean;
+  resolvedAt?: string; // 修复时间 e.g. '2026-08-28'
+  resolvedDaysAgo?: number; // 距今修复已过去的天数
+  isArchived?: boolean; // 是否已移入离线存档
+  archivedAt?: string; // 归档时间
+}
+
+export interface AutoArchiveConfig {
+  enabled: boolean;
+  daysThreshold: number; // 默认 30 天
+  frequency: 'realtime' | 'daily' | 'weekly';
+  autoCompressHistory: boolean;
 }
 
 export interface AuditReportData {
@@ -203,3 +214,68 @@ export interface EdgePopNode {
   status: 'optimal' | 'warning' | 'degraded';
   cdnProvider: string;
 }
+
+// ================= AI驱动内容质量分析 (Gemini API 增强) =================
+export interface AiKeywordDensityItem {
+  keyword: string;
+  frequency: number;
+  densityPercentage: number;
+  status: '适中' | '偏低' | '偏高';
+  suggestion: string;
+}
+
+export interface AiKeywordDensityAnalysis {
+  score: number;
+  status: string;
+  analysis: string;
+  targetKeywords: AiKeywordDensityItem[];
+}
+
+export interface AiContextualRelevanceAnalysis {
+  score: number;
+  topicalDepth: string;
+  analysis: string;
+  coveredEntities: string[];
+  missingEntities: string[];
+}
+
+export interface AiCitationFactor {
+  factorName: string;
+  score: number;
+  verdict: string;
+  description: string;
+}
+
+export interface AiModelCitationRate {
+  modelName: string;
+  predictedRate: number;
+  advantage: string;
+}
+
+export interface AiCitationPredictabilityAnalysis {
+  score: number;
+  predictionLevel: '极高' | '良好' | '中等' | '偏低';
+  analysis: string;
+  factors: AiCitationFactor[];
+  modelCitationRates: AiModelCitationRate[];
+}
+
+export interface AiContentRecommendation {
+  id: string;
+  priority: '高' | '中' | '低';
+  category: '关键词优化' | '语境深度' | 'GEO引用改造' | '结构化信息';
+  title: string;
+  issueDetail: string;
+  actionableGuidance: string;
+  codeOrContentSnippet?: string;
+}
+
+export interface AiContentQualityAnalysisResult {
+  overallQualityScore: number;
+  executiveSummary: string;
+  keywordDensity: AiKeywordDensityAnalysis;
+  contextualRelevance: AiContextualRelevanceAnalysis;
+  llmCitationPredictability: AiCitationPredictabilityAnalysis;
+  recommendations: AiContentRecommendation[];
+}
+

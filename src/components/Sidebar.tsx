@@ -46,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'audit' as const,
       label: '自动化全站体检',
-      sublabel: 'SEO健康分与修复清单',
+      sublabel: '技术缺陷与 Gemini 内容评估',
       icon: ShieldCheck,
       badge: `${unresolvedIssuesCount} 待修`,
       badgeColor:

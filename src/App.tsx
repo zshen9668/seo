@@ -4,11 +4,13 @@ import {
   INITIAL_TRACKED_KEYWORDS,
   INITIAL_AUDIT_REPORT,
   INITIAL_COMPETITOR_OVERLAP,
+  INITIAL_AUTO_ARCHIVE_CONFIG,
 } from './data/mockData';
 import {
   Website,
   TrackedKeyword,
   AuditReportData,
+  AutoArchiveConfig,
 } from './types/seo';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -118,13 +120,100 @@ export default function App() {
     }, 1800);
   };
 
+  const [autoArchiveConfig, setAutoArchiveConfig] = useState<AutoArchiveConfig>(() => {
+    const saved = localStorage.getItem('seopilot_auto_archive_config');
+    return saved ? JSON.parse(saved) : INITIAL_AUTO_ARCHIVE_CONFIG;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('seopilot_auto_archive_config', JSON.stringify(autoArchiveConfig));
+  }, [autoArchiveConfig]);
+
   // Toggle issue resolved status
   const handleToggleIssueResolved = (issueId: string) => {
     setAuditReport((prev) => ({
       ...prev,
+      issues: prev.issues.map((iss) => {
+        if (iss.id === issueId) {
+          const nextResolved = !iss.isResolved;
+          return {
+            ...iss,
+            isResolved: nextResolved,
+            resolvedAt: nextResolved ? new Date().toISOString().substring(0, 10) : undefined,
+            resolvedDaysAgo: nextResolved ? 0 : undefined,
+            isArchived: nextResolved ? iss.isArchived : false,
+          };
+        }
+        return iss;
+      }),
+    }));
+  };
+
+  const handleArchiveIssue = (issueId: string) => {
+    setAuditReport((prev) => ({
+      ...prev,
       issues: prev.issues.map((iss) =>
-        iss.id === issueId ? { ...iss, isResolved: !iss.isResolved } : iss
+        iss.id === issueId
+          ? {
+              ...iss,
+              isArchived: true,
+              archivedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+            }
+          : iss
       ),
+    }));
+  };
+
+  const handleArchiveMultiple = (issueIds: string[]) => {
+    const now = new Date().toISOString().replace('T', ' ').substring(0, 16);
+    setAuditReport((prev) => ({
+      ...prev,
+      issues: prev.issues.map((iss) =>
+        issueIds.includes(iss.id)
+          ? {
+              ...iss,
+              isArchived: true,
+              archivedAt: now,
+            }
+          : iss
+      ),
+    }));
+  };
+
+  const handleRestoreIssue = (issueId: string) => {
+    setAuditReport((prev) => ({
+      ...prev,
+      issues: prev.issues.map((iss) =>
+        iss.id === issueId
+          ? {
+              ...iss,
+              isArchived: false,
+              archivedAt: undefined,
+            }
+          : iss
+      ),
+    }));
+  };
+
+  const handleRestoreAllArchived = () => {
+    setAuditReport((prev) => ({
+      ...prev,
+      issues: prev.issues.map((iss) =>
+        iss.isArchived
+          ? {
+              ...iss,
+              isArchived: false,
+              archivedAt: undefined,
+            }
+          : iss
+      ),
+    }));
+  };
+
+  const handlePurgeArchived = () => {
+    setAuditReport((prev) => ({
+      ...prev,
+      issues: prev.issues.filter((iss) => !iss.isArchived),
     }));
   };
 
@@ -259,6 +348,13 @@ export default function App() {
                 isAuditing={isAuditing}
                 onToggleIssueResolved={handleToggleIssueResolved}
                 onUpdateScheduleFrequency={handleUpdateScheduleFrequency}
+                autoArchiveConfig={autoArchiveConfig}
+                onUpdateAutoArchiveConfig={setAutoArchiveConfig}
+                onArchiveIssue={handleArchiveIssue}
+                onArchiveMultiple={handleArchiveMultiple}
+                onRestoreIssue={handleRestoreIssue}
+                onRestoreAllArchived={handleRestoreAllArchived}
+                onPurgeArchived={handlePurgeArchived}
               />
             )}
 

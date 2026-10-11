@@ -11,6 +11,8 @@ import {
   PromptSimulationTest,
   HreflangCheckItem,
   EdgePopNode,
+  AiContentQualityAnalysisResult,
+  AutoArchiveConfig,
 } from '../types/seo';
 
 export const INITIAL_WEBSITES: Website[] = [
@@ -377,6 +379,9 @@ rewrite ^/docs/deprecated-helm-values$ /docs/helm-values permanent;`,
       codeSnippet: `/* Tailwind CSS 样式类修复 */
 className="py-3 px-4 min-h-[48px] flex items-center text-sm"`,
       isResolved: true,
+      resolvedAt: '2026-09-29',
+      resolvedDaysAgo: 12,
+      isArchived: false,
     },
     {
       id: 'iss-6',
@@ -391,8 +396,73 @@ className="py-3 px-4 min-h-[48px] flex items-center text-sm"`,
       recommendation: '添加 rel="canonical" 规范标签，指向纯净主干地址。',
       codeSnippet: `<link rel="canonical" href="https://cloudscale.io/blog" />`,
       isResolved: true,
+      resolvedAt: '2026-09-02',
+      resolvedDaysAgo: 39,
+      isArchived: false, // 修复已超30天，可被自动归档或一键归档
+    },
+    {
+      id: 'iss-7',
+      title: '旧版 HTTP 静态资源未配置 Strict-Transport-Security (HSTS)',
+      category: '收录与技术架构',
+      priority: '中度',
+      impactScore: 65,
+      effort: '快速修复',
+      affectedUrlsCount: 12,
+      sampleUrls: ['https://cloudscale.io/assets/v1/app.css'],
+      description: '全站未强制注入 HSTS 响应头，可能导致降级为非加密明文连接。',
+      recommendation: '在 CDN 边缘规则注入 max-age=31536000; includeSubDomains; preload。',
+      codeSnippet: `add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;`,
+      isResolved: true,
+      resolvedAt: '2026-08-25',
+      resolvedDaysAgo: 47,
+      isArchived: true,
+      archivedAt: '2026-09-25 02:00',
+    },
+    {
+      id: 'iss-8',
+      title: '站点地图 sitemap.xml 存在已下线废弃 API 路由',
+      category: '死链与404',
+      priority: '高危',
+      impactScore: 78,
+      effort: '快速修复',
+      affectedUrlsCount: 5,
+      sampleUrls: ['https://cloudscale.io/sitemap-v1-api.xml'],
+      description: '下线路由持续存在于地图文件中，导致搜索引擎爬虫高频抓取产生大量 404。',
+      recommendation: '重建动态 sitemap.xml 生成脚本，剔除所有状态码非 200 的历史端点。',
+      codeSnippet: `// 过滤下线废弃路径
+routes = routes.filter(r => !r.isDeprecated && r.status === 200);`,
+      isResolved: true,
+      resolvedAt: '2026-08-14',
+      resolvedDaysAgo: 58,
+      isArchived: true,
+      archivedAt: '2026-09-14 02:00',
+    },
+    {
+      id: 'iss-9',
+      title: '第三方分析脚本阻塞主线程首次渲染 (FCP > 2.2s)',
+      category: '页面速度与性能',
+      priority: '高危',
+      impactScore: 82,
+      effort: '快速修复',
+      affectedUrlsCount: 8,
+      sampleUrls: ['https://cloudscale.io/features'],
+      description: '头部同步引入了营销跟踪脚本，延迟了 DOM 树就绪。',
+      recommendation: '为跟踪脚本添加 defer 或 async 属性，延迟至用户发生交互后加载。',
+      codeSnippet: `<script src="https://analytics.example.com/tag.js" async defer></script>`,
+      isResolved: true,
+      resolvedAt: '2026-08-01',
+      resolvedDaysAgo: 71,
+      isArchived: true,
+      archivedAt: '2026-09-01 02:00',
     },
   ],
+};
+
+export const INITIAL_AUTO_ARCHIVE_CONFIG: AutoArchiveConfig = {
+  enabled: true,
+  daysThreshold: 30,
+  frequency: 'daily',
+  autoCompressHistory: true,
 };
 
 export const MOCK_SEED_SUGGESTIONS: Record<string, KeywordSuggestion[]> = {
@@ -987,4 +1057,213 @@ export const INITIAL_EDGE_POPS: EdgePopNode[] = [
   { city: '香港', country: '中国香港 🇭🇰', latencyMs: 29, ttfbMs: 52, status: 'optimal', cdnProvider: 'Cloudflare Anycast' },
   { city: '伦敦', country: '英国 🇬🇧', latencyMs: 74, ttfbMs: 102, status: 'warning', cdnProvider: 'Cloudflare Anycast' },
 ];
+
+export interface SiteContentPreset {
+  id: string;
+  siteId: string;
+  pageTitle: string;
+  pageUrl: string;
+  primaryKeywords: string[];
+  contentSample: string;
+}
+
+export const SITE_CONTENT_PRESETS: SiteContentPreset[] = [
+  {
+    id: 'preset-1',
+    siteId: 'site-1',
+    pageTitle: '云原生 APM 全栈可观测性落地页 (首页)',
+    pageUrl: 'https://cloudscale.io/',
+    primaryKeywords: ['云原生架构', 'APM监控', '自动化SEO', '分布式链路追踪'],
+    contentSample: `云跃 (CloudScale) 是业界领先的企业级云原生 APM 与全栈可观测性中控平台。系统通过无侵入式 eBPF 技术与 OpenTelemetry 标准，实现对微服务架构的高并发链路追踪、实时指标聚合与异常根因智能诊断。
+
+### 为什么技术团队信赖云跃？
+1. **秒级指标下钻**：端到端平均延迟降低至 15ms，核心指标实时计算。
+2. **自动化 SEO 与 GEO 确权**：提供全站自动化体检、死链识别、LCP性能诊断及大语言模型权威知识库结构化确权，助力技术品牌在全球开发者搜索中位列第一。
+3. **低资源损耗**：CPU 开销小于 1.5%，内存占用降低 40%。
+
+针对 Kubernetes 集群、Serverless 及多云混合架构，云跃提供开箱即用的自动化运维仪表盘与故障自愈工作流。`
+  },
+  {
+    id: 'preset-2',
+    siteId: 'site-1',
+    pageTitle: '技术文档：Kubernetes 自动化可观测性配置指南',
+    pageUrl: 'https://cloudscale.io/docs/k8s-observability',
+    primaryKeywords: ['k8s监控', 'eBPF探针', 'OpenTelemetry', '可观测性'],
+    contentSample: `在生产环境部署 Kubernetes 探针时，传统 Sidecar 模式常带来显著的内存与调度冗余。通过配置 DaemonSet 并启用 eBPF 内核级无侵入挂载，可在不重启业务 Pod 的前提下完成 L7 层 HTTP/gRPC 调用链路采集。
+
+### 核心部署流程：
+- 第一步：使用 Helm 安装 cloudscale-operator。
+- 第二步：配置 cluster-observability.yaml，声明采集粒度与指标白名单。
+- 第三步：启用 OpenTelemetry Collector 统一向控制台汇聚 Prometheus 兼容指标。`
+  },
+  {
+    id: 'preset-3',
+    siteId: 'site-2',
+    pageTitle: '脉动零售：AI 驱动的跨境电商转化率与智能选品',
+    pageUrl: 'https://retailpulse.store/',
+    primaryKeywords: ['跨境独立站', '转化率优化', '智能选品', '多币种结算'],
+    contentSample: `脉动零售 (RetailPulse) 为全球跨境出海品牌打造下一代高转化率独立站引擎。依托实时消费者行为图谱与 AI 动态定价算法，帮助卖家平均提升 28.5% 的客单转化率。
+
+全站通过全球 Anycast CDN 与边缘加速节点保障 99.99% 的可用性，LCP 最大内容绘制时间控制在 1.2 秒内，完美符合 Google 移动端友好度标准及欧美本地化多币种支付合规。`
+  },
+  {
+    id: 'preset-4',
+    siteId: 'site-3',
+    pageTitle: 'DevFlow 技术前沿：如何利用 GEO 重塑技术博客权威度',
+    pageUrl: 'https://devflow-insights.dev/posts/geo-strategy-for-developers',
+    primaryKeywords: ['技术博客SEO', '生成式引擎优化', '知识库索引', '开发者流量'],
+    contentSample: `随着开发者越来越多地使用 ChatGPT、Cursor、Perplexity 作为第一技术检索入口，传统的关键字打法已无法满足流量获取需求。我们必须转向基于实体与知识结构的 GEO (Generative Engine Optimization) 策略。
+
+关键实践包括：在文章首段采用“结论前置 (Answer-First)”范式；将代码示例与错误排查指南以严密的主题实体图谱输出，并配合高质量 Schema.org 结构化标记。`
+  }
+];
+
+export const INITIAL_AI_CONTENT_ANALYSIS: AiContentQualityAnalysisResult = {
+  overallQualityScore: 88,
+  executiveSummary:
+    '经 Gemini 深度语义解析：当前站点页面在“云原生架构”与“APM监控”等核心业务主题上具备高权威度 (Topical Authority)，信息增益显著。关键词密度整体保持在 2.1% 的健康区间。在生成式引擎优化 (GEO) 维度，事实数据与量化指标密度高，对主流大模型（如 ChatGPT、Google Gemini 及 Perplexity）展现出极佳的知识库收录与精准引用潜力，建议进一步补齐 FAQPage 结构化标记以最大化首屏直接引用概率。',
+  keywordDensity: {
+    score: 86,
+    status: '黄金密度平衡 (1.8% ~ 2.4%)',
+    analysis:
+      '核心主题词在首段、子标题及结论处分布平滑自然，无任何机械堆砌嫌疑。次级衍生词覆盖均衡，建议在末尾号召行动区域自然穿插 1~2 组相关行动词。',
+    targetKeywords: [
+      {
+        keyword: '云原生架构',
+        frequency: 12,
+        densityPercentage: 2.3,
+        status: '适中',
+        suggestion: '出现频次与段落跨度高度均衡，处于 2%~2.5% 的黄金权重点。',
+      },
+      {
+        keyword: 'APM监控',
+        frequency: 9,
+        densityPercentage: 1.8,
+        status: '适中',
+        suggestion: '词频合理，在 H2 标题与正文段首均有锚定，无需刻意增减。',
+      },
+      {
+        keyword: '自动化SEO',
+        frequency: 4,
+        densityPercentage: 0.8,
+        status: '偏低',
+        suggestion: '当前密度 0.8% 偏低，建议在特色优势列表项中增补 2 处语义关联点。',
+      },
+      {
+        keyword: '分布式链路追踪',
+        frequency: 8,
+        densityPercentage: 1.6,
+        status: '适中',
+        suggestion: '与 OpenTelemetry 形成强共现词对，有助于搜索引擎确认主题权威。',
+      },
+    ],
+  },
+  contextualRelevance: {
+    score: 91,
+    topicalDepth: '企业级专家纵深 (High E-E-A-T)',
+    analysis:
+      '内容不仅涵盖产品基本功能，更深入到 eBPF 底层技术架构与工业级指标，具备鲜明的原创信息增益 (Information Gain)，能有效抵御低质量聚合页的竞争。',
+    coveredEntities: [
+      'eBPF 无侵入探针',
+      'OpenTelemetry 协议标准',
+      'Core Web Vitals (LCP 1.2s)',
+      'Kubernetes 微服务治理',
+      'GEO 大语言模型知识图谱',
+    ],
+    missingEntities: [
+      'Schema.org 结构化数据 (JSON-LD)',
+      'W3C 分布式追踪上下文规范 (W3C Trace Context)',
+      'Perplexity 权威来源背书标注',
+      'ISO/SOC2 安全合规资质',
+    ],
+  },
+  llmCitationPredictability: {
+    score: 89,
+    predictionLevel: '极高',
+    analysis:
+      '文本结构具备“先结论、后论据、辅以精准数值”的极佳逻辑链，极其便于各类大模型分块分词（Chunking）后直接抽取为权威答案答案卡片。',
+    factors: [
+      {
+        factorName: '可验证数值与指标密度',
+        score: 95,
+        verdict: '极高',
+        description: '包含“15ms”、“1.5% CPU”、“40% 内存”等具体量化数据，大模型极其偏好作为引用事实源。',
+      },
+      {
+        factorName: '结论前置 (Answer-First) 表达',
+        score: 88,
+        verdict: '良好',
+        description: '段首提供直接定义，易被搜索大模型提取为直答摘要 (Direct Answer)。',
+      },
+      {
+        factorName: '结构化格式 (列表与小标题)',
+        score: 92,
+        verdict: '优秀',
+        description: '三段式有序列表利于大模型快速抽取步骤与核心亮点。',
+      },
+      {
+        factorName: '语义唯一性与消歧能力',
+        score: 84,
+        verdict: '良好',
+        description: '专业术语边界清晰，避免了泛化通俗词语造成的检索降权。',
+      },
+    ],
+    modelCitationRates: [
+      { modelName: 'Google Gemini 2.5/3.0', predictedRate: 94, advantage: '完美契合 Google SGE 与 AI Overviews 实体收录逻辑' },
+      { modelName: 'ChatGPT (GPT-4o)', predictedRate: 89, advantage: '结构化清晰，适合作为开发者技术选型问答源' },
+      { modelName: 'Perplexity Search', predictedRate: 92, advantage: '指标数据鲜明，极易被标注为第一信源脚注' },
+      { modelName: 'Claude 3.7 Sonnet', predictedRate: 87, advantage: '严谨的技术推导，无营销套话，逻辑紧密' },
+      { modelName: 'SearchGPT', predictedRate: 88, advantage: '移动端落地页快速提取卡片契合度高' },
+    ],
+  },
+  recommendations: [
+    {
+      id: 'rec-1',
+      priority: '高',
+      category: 'GEO引用改造',
+      title: '重构首段为“结论前置 (Answer-First)”大模型最佳采纳格式',
+      issueDetail:
+        '前两句包含较多品牌修饰定语，在大模型做 100-token 文本嵌入压缩时，核心答案提取效率受损约 18%。',
+      actionableGuidance:
+        '将首句直接写为清晰的“定义 + 解决的问题 + 独家量化指标”，直接满足技术选型提问。',
+      codeOrContentSnippet:
+        '云跃 (CloudScale) 是专为分布式微服务打造的云原生 APM 可观测性系统，通过 eBPF 技术将集群监控 CPU 开销降至 1.5% 以下，并提供全栈自动化 SEO 与 GEO 大模型引用保障。',
+    },
+    {
+      id: 'rec-2',
+      priority: '高',
+      category: '关键词优化',
+      title: '提升“自动化SEO”及长尾词密度至 1.8% 并补充上下文场景',
+      issueDetail:
+        '核心监控词“自动化SEO”当前仅出现 4 次（密度 0.8%），在搜索排名竞争中稍显单薄。',
+      actionableGuidance:
+        '在特性卡片和行动倡议中分别增加 1~2 次自然嵌入，例如“全周期自动化SEO体检”。',
+      codeOrContentSnippet:
+        '通过全周期自动化SEO体检与智能死链巡检，云跃不仅保障系统底层高可用，更帮助站点获取主流搜索引擎与大模型的双重流量曝光。',
+    },
+    {
+      id: 'rec-3',
+      priority: '中',
+      category: '结构化信息',
+      title: '在页面底层注入 Schema.org FAQPage 与 SoftwareApplication JSON-LD',
+      issueDetail:
+        '缺少官方标准微数据，导致搜索引擎在展示 SERP 富媒体卡片和大模型引用知识卡片时无法直接解析实体。',
+      actionableGuidance:
+        '将以下结构化代码注入到 <head> 中，标明产品类别、支持协议及核心技术问答。',
+      codeOrContentSnippet:
+        '<script type="application/ld+json">\n{\n  "@context": "https://schema.org",\n  "@type": "SoftwareApplication",\n  "name": "CloudScale APM",\n  "applicationCategory": "DeveloperApplication",\n  "offers": {\n    "@type": "Offer",\n    "price": "0",\n    "priceCurrency": "USD"\n  }\n}\n</script>',
+    },
+    {
+      id: 'rec-4',
+      priority: '中',
+      category: '语境深度',
+      title: '加入权威标准化组织（如 CNCF、W3C）的技术参考锚点',
+      issueDetail:
+        '提及 OpenTelemetry 时若能附带官方推荐最佳实践引述，可大幅增强大模型在做学术/严肃评测时的 E-E-A-T 评分。',
+      actionableGuidance:
+        '增加一小节“遵循 CNCF 毕业标准与 OpenTelemetry v1.30 规范”，提升权威信誉背书。',
+    },
+  ],
+};
+
 

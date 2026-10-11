@@ -24,9 +24,14 @@ import {
   FileSpreadsheet,
   Printer,
   Sparkles,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
-import { AuditReportData, AuditIssue, AuditPriority, AuditCategory, Website } from '../types/seo';
+import { AuditReportData, Website, AutoArchiveConfig, AuditIssue } from '../types/seo';
+import { INITIAL_AUTO_ARCHIVE_CONFIG } from '../data/mockData';
 import { StakeholderPresentationModal } from './Modals/StakeholderPresentationModal';
+import { AiContentQualityPanel } from './AiContentQualityPanel';
+import { AutoArchiveModal } from './Modals/AutoArchiveModal';
 
 interface AutomatedAuditViewProps {
   report: AuditReportData;
@@ -35,6 +40,13 @@ interface AutomatedAuditViewProps {
   isAuditing: boolean;
   onToggleIssueResolved: (issueId: string) => void;
   onUpdateScheduleFrequency: (freq: 'daily' | 'weekly' | 'monthly') => void;
+  autoArchiveConfig?: AutoArchiveConfig;
+  onUpdateAutoArchiveConfig?: (config: AutoArchiveConfig) => void;
+  onArchiveIssue?: (issueId: string) => void;
+  onArchiveMultiple?: (issueIds: string[]) => void;
+  onRestoreIssue?: (issueId: string) => void;
+  onRestoreAllArchived?: () => void;
+  onPurgeArchived?: () => void;
 }
 
 export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
@@ -44,19 +56,52 @@ export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
   isAuditing,
   onToggleIssueResolved,
   onUpdateScheduleFrequency,
+  autoArchiveConfig,
+  onUpdateAutoArchiveConfig,
+  onArchiveIssue,
+  onArchiveMultiple,
+  onRestoreIssue,
+  onRestoreAllArchived,
+  onPurgeArchived,
 }) => {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'unresolved' | 'resolved'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'unresolved' | 'resolved' | 'archived'>('all');
   const [expandedIssueId, setExpandedIssueId] = useState<string | null>('iss-1');
   const [copiedSnippetId, setCopiedSnippetId] = useState<string | null>(null);
+
+  // Auto-Archive configuration and modal state
+  const [localArchiveConfig, setLocalArchiveConfig] = useState<AutoArchiveConfig>(
+    autoArchiveConfig || INITIAL_AUTO_ARCHIVE_CONFIG
+  );
+  const currentArchiveConfig = autoArchiveConfig || localArchiveConfig;
+  const handleUpdateConfig = onUpdateAutoArchiveConfig || setLocalArchiveConfig;
+  const [isAutoArchiveModalOpen, setIsAutoArchiveModalOpen] = useState(false);
+  const [archiveFeedback, setArchiveFeedback] = useState<string | null>(null);
 
   // Stakeholder PDF Presentation Modal
   const [isPresentationModalOpen, setIsPresentationModalOpen] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [viewSection, setViewSection] = useState<'all' | 'ai_content' | 'tech_issues'>('all');
+
+  // Archived issues & eligible to archive
+  const archivedIssues = report.issues.filter((i) => i.isArchived);
+  const eligibleToArchive = report.issues.filter(
+    (i) => i.isResolved && !i.isArchived && (i.resolvedDaysAgo ?? 0) >= currentArchiveConfig.daysThreshold
+  );
 
   // Filtered issues
   const filteredIssues = report.issues.filter((issue) => {
+    // If viewing archived list explicitly
+    if (statusFilter === 'archived') {
+      const matchesPriority = priorityFilter === 'all' || issue.priority === priorityFilter;
+      const matchesCategory = categoryFilter === 'all' || issue.category === categoryFilter;
+      return issue.isArchived && matchesPriority && matchesCategory;
+    }
+
+    // In active dashboard view, hide archived items
+    if (issue.isArchived) return false;
+
     const matchesPriority = priorityFilter === 'all' || issue.priority === priorityFilter;
     const matchesCategory = categoryFilter === 'all' || issue.category === categoryFilter;
     const matchesStatus =
@@ -66,7 +111,7 @@ export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
     return matchesPriority && matchesCategory && matchesStatus;
   });
 
-  const unresolvedCount = report.issues.filter((i) => !i.isResolved).length;
+  const unresolvedCount = report.issues.filter((i) => !i.isResolved && !i.isArchived).length;
 
   const handleCopyCode = (snippet: string, id: string) => {
     navigator.clipboard.writeText(snippet);
@@ -186,6 +231,25 @@ export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
             <span>{isAuditing ? '爬虫正在体检...' : '立即启动体检'}</span>
           </button>
 
+          {/* Auto-Archive Controller Button */}
+          <button
+            onClick={() => setIsAutoArchiveModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 px-3.5 py-2 rounded-xl border border-slate-700/80 transition-all shadow-sm"
+            title="设置自动将修复超30天的历史记录移至离线存档，保持控制面板整洁与加载性能"
+          >
+            <Archive className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">自动归档</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                currentArchiveConfig.enabled
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                  : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              {archivedIssues.length > 0 ? `${archivedIssues.length}已归档` : currentArchiveConfig.enabled ? '>30天' : '关'}
+            </span>
+          </button>
+
           {/* Export Dropdown (PDF & CSV presentation options) */}
           <div className="relative">
             <button
@@ -282,8 +346,58 @@ export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
         </div>
       </div>
 
-      {/* Overall Score & 5 Focus Area Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      {/* View Section Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/70 border border-slate-800 p-2 rounded-2xl">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => setViewSection('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              viewSection === 'all'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            全景综合体检看板
+          </button>
+          <button
+            onClick={() => setViewSection('ai_content')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              viewSection === 'ai_content'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/20'
+                : 'text-indigo-300 hover:text-white hover:bg-indigo-950/40 border border-indigo-500/30'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Gemini AI 内容质量与大模型引用 (GEO)</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 font-mono">3.8 Flash</span>
+          </button>
+          <button
+            onClick={() => setViewSection('tech_issues')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              viewSection === 'tech_issues'
+                ? 'bg-slate-800 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            5大技术缺陷排查清单 ({unresolvedCount})
+          </button>
+        </div>
+
+        <div className="text-[11px] text-slate-400 hidden sm:block">
+          当前分析站点: <span className="font-mono text-indigo-400 font-semibold">{activeSite.domain}</span>
+        </div>
+      </div>
+
+      {/* AI-driven Content Quality Analysis Panel (Gemini API 增强) */}
+      {(viewSection === 'all' || viewSection === 'ai_content') && (
+        <AiContentQualityPanel activeSite={activeSite} />
+      )}
+
+      {/* Technical Checks & Overall Score (shown in 'all' and 'tech_issues') */}
+      {(viewSection === 'all' || viewSection === 'tech_issues') && (
+        <>
+          {/* Overall Score & 5 Focus Area Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Overall Health Score Card */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between">
           <div>
@@ -458,12 +572,60 @@ export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
               onChange={(e) => setStatusFilter(e.target.value as any)}
               className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-slate-200 cursor-pointer"
             >
-              <option value="all">全部处理状态</option>
-              <option value="unresolved">仅待修复项目</option>
-              <option value="resolved">已修复项</option>
+              <option value="all">全部活动状态 (自动隐藏超30天归档)</option>
+              <option value="unresolved">仅待排查项 ({unresolvedCount})</option>
+              <option value="resolved">近期已解决 (活跃)</option>
+              <option value="archived">离线历史存档 ({archivedIssues.length} 项)</option>
             </select>
           </div>
         </div>
+
+        {/* Auto-Archive Notification & Quick Trigger Banner */}
+        {eligibleToArchive.length > 0 && (
+          <div className="p-3.5 bg-indigo-950/30 border border-indigo-500/25 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-in fade-in">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center shrink-0">
+                <Archive className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-semibold text-white">自动归档提醒:</span>{' '}
+                <span className="text-slate-300">
+                  检测到 <span className="font-mono text-indigo-400 font-bold">{eligibleToArchive.length}</span> 条缺陷已修复超过 {currentArchiveConfig.daysThreshold} 天，系统可自动移至离线存档，保持控制面板轻量清爽。
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  const ids = eligibleToArchive.map((i) => i.id);
+                  if (onArchiveMultiple) {
+                    onArchiveMultiple(ids);
+                  }
+                  setArchiveFeedback(`已将 ${ids.length} 条已修复记录移入离线历史存档`);
+                  setTimeout(() => setArchiveFeedback(null), 3000);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <Archive className="w-3.5 h-3.5" />
+                <span>立即一键归档 ({eligibleToArchive.length})</span>
+              </button>
+              <button
+                onClick={() => setIsAutoArchiveModalOpen(true)}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors"
+              >
+                规则设置
+              </button>
+            </div>
+          </div>
+        )}
+
+        {archiveFeedback && (
+          <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl flex items-center gap-2 text-xs text-emerald-300 animate-in fade-in">
+            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{archiveFeedback}</span>
+          </div>
+        )}
 
         {/* Prioritized Recommendation Cards List */}
         <div className="space-y-3.5 pt-2">
@@ -516,6 +678,15 @@ export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
                         <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-medium">
                           {issue.category}
                         </span>
+                        {issue.isArchived ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                            已离线存档 (&gt;{currentArchiveConfig.daysThreshold}天)
+                          </span>
+                        ) : issue.isResolved ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            已修复 ({issue.resolvedDaysAgo ?? 0} 天前)
+                          </span>
+                        ) : null}
                       </div>
 
                       <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
@@ -525,7 +696,7 @@ export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
                   </div>
 
                   {/* Impact score, affected count & Action buttons */}
-                  <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+                  <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
                     <div className="text-right">
                       <div className="text-[10px] text-slate-400">影响度权重</div>
                       <div className="text-sm font-extrabold text-white font-mono">
@@ -544,6 +715,34 @@ export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
                     >
                       {issue.isResolved ? '✓ 已修复' : '标为已解决'}
                     </button>
+
+                    {issue.isArchived ? (
+                      <button
+                        onClick={() => {
+                          if (onRestoreIssue) onRestoreIssue(issue.id);
+                          setArchiveFeedback(`已将【${issue.title}】从离线存档还原至活动控制面板`);
+                          setTimeout(() => setArchiveFeedback(null), 3000);
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 flex items-center gap-1 transition-colors"
+                        title="从离线存档还原"
+                      >
+                        <ArchiveRestore className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>还原</span>
+                      </button>
+                    ) : issue.isResolved ? (
+                      <button
+                        onClick={() => {
+                          if (onArchiveIssue) onArchiveIssue(issue.id);
+                          setArchiveFeedback(`已将【${issue.title}】移入离线存档`);
+                          setTimeout(() => setArchiveFeedback(null), 3000);
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1 transition-colors"
+                        title="立即移入离线历史存档"
+                      >
+                        <Archive className="w-3.5 h-3.5 text-indigo-400" />
+                        <span className="hidden sm:inline">归档</span>
+                      </button>
+                    ) : null}
 
                     <button
                       onClick={() =>
@@ -632,6 +831,8 @@ export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
           })}
         </div>
       </div>
+      </>
+      )}
 
       {/* Stakeholder Presentation PDF/Print Deck Modal */}
       <StakeholderPresentationModal
@@ -640,6 +841,21 @@ export const AutomatedAuditView: React.FC<AutomatedAuditViewProps> = ({
         report={report}
         activeSite={activeSite}
         onDownloadCSV={handleExportCSV}
+      />
+
+      {/* Auto-Archive & Offline Storage Modal */}
+      <AutoArchiveModal
+        isOpen={isAutoArchiveModalOpen}
+        onClose={() => setIsAutoArchiveModalOpen(false)}
+        config={currentArchiveConfig}
+        onUpdateConfig={handleUpdateConfig}
+        issues={report.issues}
+        activeSite={activeSite}
+        onArchiveIssue={(id) => onArchiveIssue && onArchiveIssue(id)}
+        onArchiveMultiple={(ids) => onArchiveMultiple && onArchiveMultiple(ids)}
+        onRestoreIssue={(id) => onRestoreIssue && onRestoreIssue(id)}
+        onRestoreAllArchived={() => onRestoreAllArchived && onRestoreAllArchived()}
+        onPurgeArchived={() => onPurgeArchived && onPurgeArchived()}
       />
     </div>
   );
