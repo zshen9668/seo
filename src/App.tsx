@@ -62,7 +62,16 @@ const MOBILE_NAV: { id: AppTab; label: string; icon: typeof TrendingUp; activeCl
 ];
 
 export default function App() {
-  const { user, isAuthenticated, bootstrapping, login, logout } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    bootstrapping,
+    login,
+    loginWithOAuth,
+    logout,
+    oauthError,
+    oauthProviders,
+  } = useAuth();
 
   const [websites, setWebsites] = useLocalStorageState<Website[]>('seopilot_websites', INITIAL_WEBSITES);
   const [keywords, setKeywords] = useLocalStorageState<TrackedKeyword[]>(
@@ -287,7 +296,14 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage onLogin={login} />;
+    return (
+      <LoginPage
+        onLogin={login}
+        onOAuth={loginWithOAuth}
+        oauthProviders={oauthProviders}
+        oauthError={oauthError}
+      />
+    );
   }
 
   return (
