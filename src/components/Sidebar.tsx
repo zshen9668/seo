@@ -5,18 +5,16 @@ import {
   Search,
   Globe,
   Radio,
-  Clock,
-  Layers,
   Sparkles,
   ChevronRight,
-  Sliders,
   Cpu,
 } from 'lucide-react';
 import { Website } from '../types/seo';
+import type { AppTab } from '../types/app';
 
 interface SidebarProps {
-  currentTab: 'rankings' | 'audit' | 'research' | 'sites' | 'geo' | 'ai_hub';
-  onSelectTab: (tab: 'rankings' | 'audit' | 'research' | 'sites' | 'geo' | 'ai_hub') => void;
+  currentTab: AppTab;
+  onSelectTab: (tab: AppTab) => void;
   activeSite: Website;
   unresolvedIssuesCount: number;
 }
@@ -27,27 +25,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeSite,
   unresolvedIssuesCount,
 }) => {
-  const navItems = [
+  const navItems: {
+    id: AppTab;
+    label: string;
+    sublabel: string;
+    icon: typeof TrendingUp;
+    badge: string;
+    badgeColor: string;
+  }[] = [
     {
-      id: 'rankings' as const,
+      id: 'rankings',
       label: '关键词排位雷达',
-      sublabel: 'SERP 历史排位走势 (Recharts)',
+      sublabel: 'SERP 历史排位走势',
       icon: TrendingUp,
       badge: `${activeSite.totalTrackedKeywords} 个词`,
       badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
     },
     {
-      id: 'geo' as const,
+      id: 'geo',
       label: 'GEO 智能中控',
-      sublabel: 'AI引擎优化与全球地域定向',
+      sublabel: 'AI 引擎优化与地域定向',
       icon: Sparkles,
       badge: 'AI & 地域',
       badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
     },
     {
-      id: 'audit' as const,
+      id: 'audit',
       label: '自动化全站体检',
-      sublabel: '技术缺陷与 Gemini 内容评估',
+      sublabel: '技术缺陷与内容质量评估',
       icon: ShieldCheck,
       badge: `${unresolvedIssuesCount} 待修`,
       badgeColor:
@@ -56,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     },
     {
-      id: 'research' as const,
+      id: 'research',
       label: '关键词拓展挖掘',
       sublabel: '种子词拓词与竞品透视',
       icon: Search,
@@ -64,15 +69,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       badgeColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
     },
     {
-      id: 'ai_hub' as const,
+      id: 'ai_hub',
       label: 'AI API 分析接入',
-      sublabel: 'Gemini 3.8 Flash 全链路中枢',
+      sublabel: '多模型中枢 · 免费层优先',
       icon: Cpu,
-      badge: '在线 3.8',
+      badge: 'Multi-LLM',
       badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     },
     {
-      id: 'sites' as const,
+      id: 'sites',
       label: '多站点矩阵中控',
       sublabel: '站群集中化管理',
       icon: Globe,
@@ -100,6 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           return (
             <button
               key={item.id}
+              type="button"
               onClick={() => onSelectTab(item.id)}
               className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs transition-all group ${
                 isActive
@@ -107,9 +113,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent font-medium'
               }`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 ${
+                  className={`w-8 h-8 shrink-0 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
                       : 'bg-slate-800 text-slate-400 group-hover:text-slate-200'
@@ -117,17 +123,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <Icon className="w-4 h-4" />
                 </div>
-                <div className="text-left">
-                  <div className="leading-tight text-slate-100">{item.label}</div>
-                  <div className="text-[10px] text-slate-400 font-normal mt-0.5">
+                <div className="text-left min-w-0">
+                  <div className="leading-tight text-slate-100 truncate">{item.label}</div>
+                  <div className="text-[10px] text-slate-400 font-normal mt-0.5 truncate">
                     {item.sublabel}
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col items-end gap-1">
+              <div className="flex flex-col items-end gap-1 shrink-0 ml-1">
                 <span
-                  className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${item.badgeColor}`}
+                  className={`text-[9px] px-1.5 py-0.5 rounded border font-mono whitespace-nowrap ${
+                    item.badgeColor
+                  }`}
                 >
                   {item.badge}
                 </span>
@@ -138,7 +146,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </div>
 
-      {/* Audit Scheduler Status Footer Widget */}
       <div className="p-3 m-3 rounded-2xl bg-slate-950/80 border border-slate-800/90 text-xs">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5 font-semibold text-slate-200">
@@ -150,7 +157,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </div>
         <p className="text-[11px] text-slate-400 leading-relaxed">
-          上次自动化巡检于 <span className="text-slate-300 font-mono">{activeSite.lastAuditDate}</span> 执行完成，监控雷达保持在线。
+          上次自动化巡检于{' '}
+          <span className="text-slate-300 font-mono">{activeSite.lastAuditDate}</span>{' '}
+          执行完成，监控雷达保持在线。
         </p>
         <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 font-mono">
           <span>当前站点:</span>
