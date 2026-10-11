@@ -16,10 +16,12 @@ import type { AppTab } from './types/app';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { GlobalSearchBar } from './components/GlobalSearchBar';
+import { LoginPage } from './components/LoginPage';
 import { generateRealistic30DayHistory } from './utils/seoChartUtils';
 import { AddKeywordModal } from './components/Modals/AddKeywordModal';
 import { AddSiteModal } from './components/Modals/AddSiteModal';
 import { useLocalStorageState } from './hooks/useLocalStorageState';
+import { useAuth } from './hooks/useAuth';
 import { TrendingUp, ShieldCheck, Search, Globe, Sparkles, Cpu } from 'lucide-react';
 
 const KeywordPerformanceView = lazy(() =>
@@ -51,15 +53,17 @@ function ViewFallback() {
 }
 
 const MOBILE_NAV: { id: AppTab; label: string; icon: typeof TrendingUp; activeClass: string }[] = [
-  { id: 'rankings', label: '排名雷达', icon: TrendingUp, activeClass: 'text-indigo-400 font-bold' },
-  { id: 'geo', label: 'GEO中控', icon: Sparkles, activeClass: 'text-purple-400 font-bold' },
-  { id: 'audit', label: '全站体检', icon: ShieldCheck, activeClass: 'text-indigo-400 font-bold' },
-  { id: 'ai_hub', label: 'AI接入', icon: Cpu, activeClass: 'text-emerald-400 font-bold' },
-  { id: 'research', label: '拓词挖掘', icon: Search, activeClass: 'text-indigo-400 font-bold' },
-  { id: 'sites', label: '多站中控', icon: Globe, activeClass: 'text-indigo-400 font-bold' },
+  { id: 'rankings', label: '排名', icon: TrendingUp, activeClass: 'text-indigo-400 font-bold' },
+  { id: 'geo', label: 'GEO', icon: Sparkles, activeClass: 'text-purple-400 font-bold' },
+  { id: 'audit', label: '体检', icon: ShieldCheck, activeClass: 'text-indigo-400 font-bold' },
+  { id: 'ai_hub', label: 'AI', icon: Cpu, activeClass: 'text-emerald-400 font-bold' },
+  { id: 'research', label: '拓词', icon: Search, activeClass: 'text-indigo-400 font-bold' },
+  { id: 'sites', label: '多站', icon: Globe, activeClass: 'text-indigo-400 font-bold' },
 ];
 
 export default function App() {
+  const { user, isAuthenticated, bootstrapping, login, logout } = useAuth();
+
   const [websites, setWebsites] = useLocalStorageState<Website[]>('seopilot_websites', INITIAL_WEBSITES);
   const [keywords, setKeywords] = useLocalStorageState<TrackedKeyword[]>(
     'seopilot_keywords',
@@ -273,8 +277,21 @@ export default function App() {
     [auditReport.issues],
   );
 
+  if (bootstrapping) {
+    return (
+      <div className="min-h-dvh min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-sm gap-3">
+        <div className="w-5 h-5 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+        正在恢复会话…
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={login} />;
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased">
+    <div className="h-dvh min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased overflow-hidden">
       <Header
         websites={websites}
         activeSite={activeSite}
@@ -285,9 +302,11 @@ export default function App() {
         isAuditing={isAuditing}
         onOpenAddKeyword={() => setIsAddKeywordModalOpen(true)}
         onOpenAddSite={() => setIsAddSiteModalOpen(true)}
+        user={user}
+        onLogout={logout}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         <Sidebar
           currentTab={currentTab}
           onSelectTab={setCurrentTab}
@@ -295,7 +314,7 @@ export default function App() {
           unresolvedIssuesCount={unresolvedCount}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-7 pb-20 md:pb-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-7 pb-24 md:pb-8 overscroll-contain">
           <div className="max-w-7xl mx-auto">
             <GlobalSearchBar
               websites={websites}
@@ -362,18 +381,18 @@ export default function App() {
         </main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-2 py-2 flex items-center justify-around">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-1 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around">
         {MOBILE_NAV.map(({ id, label, icon: Icon, activeClass }) => (
           <button
             key={id}
             type="button"
             onClick={() => setCurrentTab(id)}
-            className={`flex flex-col items-center gap-1 text-[10px] font-medium transition-colors ${
+            className={`flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors min-w-0 flex-1 py-1 ${
               currentTab === id ? activeClass : 'text-slate-400'
             }`}
           >
             <Icon className="w-4 h-4" />
-            <span>{label}</span>
+            <span className="truncate">{label}</span>
           </button>
         ))}
       </nav>
