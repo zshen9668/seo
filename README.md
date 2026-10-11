@@ -2,7 +2,7 @@
 
 企业级**多站点 SEO / GEO 矩阵中控台**。集中管理站点矩阵、SERP 排名雷达、自动化技术体检、关键词拓展，并接入多款大模型做内容质量与生成式引擎优化（GEO）分析。
 
-> 前端 React + Vite；本地开发用 Express；生产可部署到 **Cloudflare Pages 免费额度**（静态资源 + Pages Functions）。
+> 前端 React + Vite；本地开发用 Express；生产可部署到 **Cloudflare Pages 免费额度**（静态资源 + Pages Functions）。支持**手机/电脑**登录（演示账号 + GitHub / Google OAuth）。
 
 ---
 
@@ -10,6 +10,7 @@
 
 | 模块 | 说明 |
 |------|------|
+| **登录** | 邮箱演示账号 · GitHub / Google OAuth · 会话约 7 天 |
 | **关键词排位雷达** | 多搜索引擎排名跟踪、历史走势（Recharts） |
 | **自动化全站体检** | 死链、性能、Meta、图片 Alt、移动端、收录等问题清单 |
 | **关键词拓展挖掘** | 种子词拓词、意图分类、竞品差距 |
@@ -26,7 +27,7 @@
 
 - **前端**：React 19、TypeScript、Vite 8、Tailwind CSS 4、Recharts、Lucide
 - **本地服务**：Express 5 + `tsx`（`server.ts`）
-- **生产边缘**：Cloudflare Pages Functions（`functions/`，纯 `fetch`，无 Node 长驻进程）
+- **生产边缘**：Cloudflare Pages Functions（`functions/`，纯 `fetch`）
 - **数据**：前端 Mock + `localStorage`；AI 能力走服务端 `/api/ai/*`
 
 ---
@@ -34,24 +35,18 @@
 ## 快速开始（本地）
 
 ```bash
-# 克隆
 git clone https://github.com/zshen9668/seo.git
 cd seo
-
-# 安装依赖（npm / bun / pnpm 均可）
 npm install
-
-# 环境变量（密钥由你自己填写，不要提交 .env）
 cp .env.example .env
-
-# 开发（Express + Vite 中间件，默认 http://0.0.0.0:3000）
 npm run dev
+```
 
-# 仅类型检查
-npm run lint
+默认打开开发服务后进入登录页。演示账号：
 
-# 生产构建前端静态资源 → dist/
-npm run build
+```text
+admin@seopilot.local
+admin123
 ```
 
 ### 环境变量
@@ -61,70 +56,72 @@ npm run build
 | 变量 | 说明 |
 |------|------|
 | `ZHIPU_API_KEY` | 智谱，**GLM-4-Flash 长期免费**（推荐） |
-| `SILICONFLOW_API_KEY` | 硅基流动，小模型永久免费 + 新用户额度 |
-| `GEMINI_API_KEY` | Google AI Studio 免费档 |
-| `GROQ_API_KEY` | Groq 永久免费层（有速率限制） |
-| `DEEPSEEK_API_KEY` 等 | 可选按量厂商，见 `.env.example` |
-| `CUSTOM_LLM_BASE_URL` / `CUSTOM_LLM_API_KEY` | Ollama、OpenRouter 等 OpenAI 兼容端点 |
+| `SILICONFLOW_API_KEY` | 硅基流动 |
+| `GEMINI_API_KEY` | Google AI Studio |
+| `GROQ_API_KEY` | Groq 免费层 |
+| `APP_URL` | 站点对外 URL（OAuth 必填） |
+| `GITHUB_*` / `GOOGLE_*` | OAuth Client（可选） |
+| `AUTH_DEMO_*` | 演示邮箱密码（生产请修改） |
 
-> **切勿将真实 Key 写入代码或提交到 Git。** Cloudflare 部署时在控制台「Environment variables」中配置即可。
+> **切勿将真实 Key 写入代码或提交到 Git。** Cloudflare 在控制台 Environment variables 中配置。
 
 ---
 
 ## 部署到 Cloudflare Pages（免费额度）
 
-详细步骤见 **[DEPLOY-CF.md](./DEPLOY-CF.md)**。摘要：
+详细步骤与**环境变量清单**见 **[DEPLOY-CF.md](./DEPLOY-CF.md)**。
 
-1. Cloudflare Dashboard → **Workers & Pages** → 连接本 GitHub 仓库  
-2. 构建配置：
+### 控制台方式
 
-   | 配置项 | 值 |
-   |--------|-----|
-   | Build command | `npm run build` |
-   | Build output directory | `dist` |
+1. Workers & Pages → 连接本 GitHub 仓库  
+2. Build command: `npm run build` · Output: `dist`  
+3. Settings → Environment variables 添加 Key（见下表）  
+4. Deploy  
 
-3. 在 **Settings → Environment variables** 自行添加你的 Key（如 `ZHIPU_API_KEY`）  
-4. 保存并部署  
+### CLI 方式
 
-- 静态资源：无限流量  
-- Functions：共享 Workers 免费档（约 10 万请求/天）  
-- SPA 回退：`public/_redirects`  
-
-边缘 API 实现：
-
-```text
-functions/
-  _shared/llm.ts      # 多大模型分发（fetch）
-  api/[[path]].ts     # /api/* 统一路由
+```bash
+npm install
+npm run pages:deploy          # 需先 wrangler login
+# 写入密钥示例：
+npx wrangler pages secret put ZHIPU_API_KEY --project-name=seo-pilot
+npx wrangler pages secret put APP_URL --project-name=seo-pilot
 ```
 
-与本地 Express 的 `/api/ai/*`、`/api/gemini/*` 路径兼容。
+本地模拟边缘环境：
+
+```bash
+cp .dev.vars.example .dev.vars
+npm run pages:dev             # http://localhost:8788
+```
+
+### 生产环境变量（摘要）
+
+| 类别 | 变量 |
+|------|------|
+| 登录 | `APP_URL`, `AUTH_DEMO_EMAIL`, `AUTH_DEMO_PASSWORD` |
+| OAuth | `GITHUB_CLIENT_ID/SECRET`, `GOOGLE_CLIENT_ID/SECRET` |
+| 免费 LLM | `ZHIPU_API_KEY`, `SILICONFLOW_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY` |
+
+OAuth 回调：
+
+```text
+{APP_URL}/api/auth/oauth/callback/github
+{APP_URL}/api/auth/oauth/callback/google
+```
 
 ---
 
-## 大模型与默认策略
+## 大模型默认策略
 
-| Provider ID | 厂商 | 典型默认模型 | 备注 |
-|-------------|------|--------------|------|
-| `glm` | 智谱 | `glm-4-flash` | 免费层优先 |
-| `siliconflow` | 硅基流动 | `Qwen/Qwen2.5-7B-Instruct` | 免费 / 赠额 |
-| `gemini` | Google | `gemini-2.0-flash` | AI Studio 免费档 |
-| `groq` | Groq | `llama-3.3-70b-versatile` | 免费层限速 |
-| `deepseek` | DeepSeek | `deepseek-chat` | 按量 |
-| `openai` | OpenAI | `gpt-4o-mini` | 按量 |
-| `claude` | Anthropic | `claude-3-5-haiku-latest` | 按量 |
-| `qwen` | 通义千问 | `qwen-plus` | DashScope |
-| `kimi` | Moonshot | `moonshot-v1-8k` | 按量 |
-| `custom` | 自定义 | — | OpenAI 兼容 |
+**选用顺序**：已配置的 智谱 → 硅基流动 → Gemini → Groq；均未配置则 fallback 演示数据。
 
-**默认选用顺序（边缘 Functions）**：已配置的 智谱 → 硅基流动 → Gemini → Groq；均未配置则使用本地 fallback。
-
-申请入口（自行注册）：
-
-- 智谱：https://open.bigmodel.cn  
-- 硅基流动：https://cloud.siliconflow.cn  
-- Gemini：https://aistudio.google.com  
-- Groq：https://console.groq.com  
+| Provider | 默认模型 | 备注 |
+|----------|----------|------|
+| `glm` | `glm-4-flash` | 免费优先 |
+| `siliconflow` | `Qwen/Qwen2.5-7B-Instruct` | 免费 / 赠额 |
+| `gemini` | `gemini-2.0-flash` | AI Studio |
+| `groq` | `llama-3.3-70b-versatile` | 限速 |
 
 ---
 
@@ -132,16 +129,12 @@ functions/
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/ai/providers` | 服务商与模型列表、连接状态 |
-| POST | `/api/ai/probe-provider` | 探测某厂商是否可用 |
-| POST | `/api/ai/analyze-content` | 页面内容质量 / GEO 评估 |
-| POST | `/api/ai/simulate-geo` | 大模型品牌采纳模拟 |
-| POST | `/api/ai/expand-keywords` | 语义拓词 |
-| POST | `/api/ai/analyze-rankings` | 排位异动诊断 |
-| POST | `/api/ai/benchmark-compare` | 多模型横向对比 |
-| GET | `/api/gemini/status` | 兼容状态探针 |
-
-部分路径另有 `/api/gemini/*` 别名，便于旧前端调用。
+| POST | `/api/auth/login` | 邮箱登录 |
+| GET | `/api/auth/providers` | 登录方式是否启用 |
+| GET | `/api/auth/oauth/github` | GitHub OAuth |
+| GET | `/api/auth/oauth/google` | Google OAuth |
+| GET | `/api/ai/providers` | LLM 列表 |
+| POST | `/api/ai/analyze-content` 等 | 分析 / GEO / 拓词 / 排位 / 对比 |
 
 ---
 
@@ -149,48 +142,41 @@ functions/
 
 ```text
 .
-├── functions/                 # Cloudflare Pages Functions（生产 AI API）
+├── functions/                 # Cloudflare Pages Functions
+│   ├── _shared/auth.ts        # 登录 + OAuth
 │   ├── _shared/llm.ts
 │   └── api/[[path]].ts
-├── public/_redirects          # SPA 回退（CF Pages）
+├── public/_redirects          # SPA 回退
+├── public/_headers            # 安全 / 缓存头
+├── wrangler.toml              # Pages 项目配置
 ├── src/
-│   ├── App.tsx                # 主布局与状态
-│   ├── components/            # 各业务视图与弹窗
-│   ├── data/mockData.ts       # 演示数据
-│   ├── types/seo.ts           # 类型定义
-│   └── utils/
-├── server.ts                  # 本地 Express（开发 / 自建 Node 部署）
-├── index.html
-├── package.json
-├── vite.config.ts
+│   ├── components/LoginPage.tsx
+│   ├── hooks/useAuth.ts
+│   └── ...
+├── server.ts                  # 本地 Express
 ├── .env.example
+├── .dev.vars.example
 ├── DEPLOY-CF.md
 └── README.md
 ```
 
 ---
 
-## 脚本说明
+## 脚本
 
 | 命令 | 说明 |
 |------|------|
-| `npm run dev` | 本地开发（Express + Vite middleware） |
-| `npm run build` | 构建前端到 `dist/`（CF / 静态托管用） |
-| `npm run start` | 生产模式启动 Express（需先 `build`，并设置 `NODE_ENV=production`） |
-| `npm run preview` | Vite 预览静态构建 |
+| `npm run dev` | 本地 Express + Vite |
+| `npm run build` | 构建到 `dist/` |
+| `npm run pages:dev` | 本地 Pages + Functions |
+| `npm run pages:deploy` | 部署到 CF Pages 项目 `seo-pilot` |
 | `npm run lint` | TypeScript 检查 |
 
 ---
 
 ## 注意事项
 
-1. **密钥**：只放在本地 `.env` 或 Cloudflare 环境变量中，不要提交仓库。  
-2. **双运行时**：本地开发走 `server.ts`；CF 生产走 `functions/`。API 路径对齐，密钥变量名一致。  
-3. **无 Key 演示**：所有 AI 接口失败时会返回高保真本地结果，便于纯前端体验。  
-4. **费用**：CF 静态与 Functions 免费档通常够个人使用；大模型费用以各厂商账单为准（优先用免费层即可）。  
-
----
-
-## License
-
-Private / 按仓库设置。若需开源许可，请自行补充 `LICENSE` 文件。
+1. 密钥只放在 `.env` / `.dev.vars` 或 Cloudflare 环境变量中。  
+2. 本地开发走 `server.ts`；CF 生产走 `functions/`（路径对齐）。  
+3. 生产请修改默认演示密码；启用 OAuth 时务必设置 `APP_URL`。  
+4. 未配置 LLM Key 时仍可完整演示界面。  
