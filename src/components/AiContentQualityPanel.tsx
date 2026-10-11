@@ -54,6 +54,8 @@ export const AiContentQualityPanel: React.FC<AiContentQualityPanelProps> = ({ ac
   const [contentSample, setContentSample] = useState<string>(currentPreset.contentSample);
   const [focusMode, setFocusMode] = useState<string>('comprehensive');
   const [isEditorExpanded, setIsEditorExpanded] = useState<boolean>(false);
+  const [selectedModelKey, setSelectedModelKey] = useState<string>('gemini:gemini-3.8-flash');
+  const [reasoningChain, setReasoningChain] = useState<string | null>(null);
 
   // Analysis result state
   const [analysis, setAnalysis] = useState<AiContentQualityAnalysisResult>(
@@ -79,11 +81,13 @@ export const AiContentQualityPanel: React.FC<AiContentQualityPanelProps> = ({ ac
     setContentSample(preset.contentSample);
   };
 
-  // Run real Gemini content evaluation
+  // Run real LLM content evaluation with selected model
   const handleRunGeminiAnalysis = async () => {
+    const [provider, model] = selectedModelKey.split(':');
     setIsLoading(true);
     setNoticeMessage(null);
-    setLoadingStage('正在建立与 Google Gemini 3.8 Flash 的安全加密推理会话...');
+    setReasoningChain(null);
+    setLoadingStage(`正在建立与 ${provider.toUpperCase()} (${model}) 的安全推理会话...`);
 
     const timer1 = setTimeout(() => {
       setLoadingStage('正在多维度计算关键词密度、TF-IDF 与首尾段分布语义...');
@@ -103,10 +107,12 @@ export const AiContentQualityPanel: React.FC<AiContentQualityPanelProps> = ({ ac
         .map((k) => k.trim())
         .filter(Boolean);
 
-      const response = await fetch('/api/gemini/analyze-content', {
+      const response = await fetch('/api/ai/analyze-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          provider,
+          model,
           domain: activeSite.domain,
           pageTitle,
           pageUrl,
@@ -120,18 +126,21 @@ export const AiContentQualityPanel: React.FC<AiContentQualityPanelProps> = ({ ac
 
       if (resData.success && resData.data) {
         setAnalysis(resData.data);
-        setApiSource(resData.source || 'gemini-3.8-flash');
+        setApiSource(`${provider}:${model}`);
+        if (resData.reasoningChain) {
+          setReasoningChain(resData.reasoningChain);
+        }
         if (resData.warning) {
           setNoticeMessage(resData.warning);
         } else {
-          setNoticeMessage('Gemini 3.8 Flash 已成功完成对当前页面正文的多模态深度评估！');
+          setNoticeMessage(`${provider.toUpperCase()} (${model}) 已成功完成页面质量与 GEO 引用率评估！`);
         }
       } else {
         throw new Error(resData.error || '分析响应格式异常');
       }
     } catch (err: any) {
       console.warn('Fallback due to request failure:', err);
-      setNoticeMessage('已切换为智能专家模型进行评估。');
+      setNoticeMessage('已切换为自适应专家模型进行评估。');
     } finally {
       clearTimeout(timer1);
       clearTimeout(timer2);
@@ -172,26 +181,42 @@ export const AiContentQualityPanel: React.FC<AiContentQualityPanelProps> = ({ ac
               <Bot className="w-5 h-5" />
             </div>
             <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-              Gemini 智能内容质量与大模型引用率 (GEO) 分析面板
+              AI 多大模型内容质量与引用率 (GEO) 分析面板
             </h3>
             <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 flex items-center gap-1 font-semibold">
               <Sparkles className="w-3 h-3 text-indigo-400" />
-              Powered by Gemini 3.8 Flash
+              多模型自如切换
             </span>
           </div>
           <p className="text-xs text-slate-400 max-w-3xl leading-relaxed">
-            利用 Gemini API 根据当前网站内容与目标词，深度解构关键词密度、语境相关性（Topical Authority）以及主流大模型（ChatGPT / Gemini / Perplexity）的引用可预测概率，输出精准可落地的结构化重构建议。
+            支持由 Google Gemini、DeepSeek-R1、OpenAI GPT-4o、Claude 3.7 或通义千问针对当前网站内容与目标词，深度解构关键词密度、语境相关性（Topical Authority）及大模型引用概率，输出结构化重构建议。
           </p>
         </div>
 
-        {/* Action button */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Action button & Model Switcher */}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          {/* Model selection dropdown */}
+          <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-700/80 rounded-xl px-2.5 py-1">
+            <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+            <select
+              value={selectedModelKey}
+              onChange={(e) => setSelectedModelKey(e.target.value)}
+              className="bg-transparent text-slate-200 text-xs font-semibold focus:outline-none cursor-pointer"
+            >
+              <option value="gemini:gemini-3.8-flash">Gemini 3.8 Flash (推荐·极速)</option>
+              <option value="deepseek:deepseek-reasoner">DeepSeek-R1 (深度思维链)</option>
+              <option value="openai:gpt-4o">OpenAI GPT-4o (全能旗舰)</option>
+              <option value="claude:claude-3-7-sonnet-latest">Claude 3.7 Sonnet (高遵从)</option>
+              <option value="qwen:qwen-max">通义千问 Qwen-Max (本土商业)</option>
+            </select>
+          </div>
+
           <button
             onClick={() => setIsEditorExpanded(!isEditorExpanded)}
             className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-colors flex items-center gap-1.5"
           >
             <Sliders className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{isEditorExpanded ? '收起样本编辑' : '配置待评测内容'}</span>
+            <span>{isEditorExpanded ? '收起样本' : '配置内容'}</span>
           </button>
           <button
             onClick={handleRunGeminiAnalysis}
@@ -199,21 +224,34 @@ export const AiContentQualityPanel: React.FC<AiContentQualityPanelProps> = ({ ac
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-60 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>{isLoading ? 'Gemini 深度评估中...' : '立即执行 Gemini 智能评估'}</span>
+            <span>{isLoading ? '大模型推理评估中...' : '启动大模型智能评估'}</span>
           </button>
         </div>
       </div>
 
       {/* Notice Message if any */}
       {noticeMessage && (
-        <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-2xl p-3 px-4 flex items-center justify-between text-xs text-indigo-200 animate-in fade-in">
+        <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-2xl p-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-indigo-200 animate-in fade-in">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
             <span>{noticeMessage}</span>
           </div>
           <span className="text-[10px] text-indigo-300/70 font-mono">
-            引擎状态: {apiSource === 'gemini-3.8-flash' ? 'Gemini 3.8 Flash 直连' : '自适应智能模型'}
+            当前基座: {apiSource}
           </span>
+        </div>
+      )}
+
+      {/* DeepSeek Reasoning Chain accordion if available */}
+      {reasoningChain && (
+        <div className="bg-purple-950/30 border border-purple-500/40 rounded-2xl p-4 text-xs space-y-2 animate-in fade-in">
+          <div className="flex items-center gap-2 text-purple-300 font-bold">
+            <Cpu className="w-4 h-4 text-purple-400" />
+            <span>DeepSeek-R1 显式思维链推演过程 (Reasoning Chain)</span>
+          </div>
+          <div className="p-3 bg-slate-950/80 rounded-xl font-mono text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+            {reasoningChain}
+          </div>
         </div>
       )}
 

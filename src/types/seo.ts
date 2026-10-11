@@ -279,3 +279,165 @@ export interface AiContentQualityAnalysisResult {
   recommendations: AiContentRecommendation[];
 }
 
+// ================= AI API 分析接入中枢与各模块接入类型 =================
+export interface AiApiStatus {
+  status: 'online' | 'degraded' | 'simulated';
+  model: string;
+  apiVersion: string;
+  hasKey: boolean;
+  pingMs: number;
+  lastChecked: string;
+  totalCallsToday: number;
+  successRate: number;
+  averageLatencyMs: number;
+  supportedEndpoints: {
+    endpoint: string;
+    method: string;
+    description: string;
+    model: string;
+    status: 'active' | 'degraded';
+  }[];
+}
+
+export interface AiGeoSimulationResult {
+  isBrandMentioned: boolean;
+  recommendationRank: number | null;
+  brandName: string;
+  engine: string;
+  geoScore: number;
+  sentiment: '正面积极' | '客观中立' | '竞品优先' | '未被收录';
+  llmResponseExcerpt: string;
+  citedSnippets: string[];
+  citationReasoning: string;
+  actionableTip: string;
+  source: string;
+  latencyMs?: number;
+}
+
+export interface AiKeywordExpansionItem {
+  id: string;
+  keyword: string;
+  searchVolume: number;
+  difficulty: number;
+  cpc: number;
+  intent: '信息查询' | '商业调研' | '交易购买' | '导航寻找';
+  trendGrowth: number;
+  serpFeatures: string[];
+  competitionLevel: '低' | '中' | '高';
+  aiReasoning: string;
+  llmQueryPattern: string;
+}
+
+export interface AiKeywordExpansionResult {
+  seedKeyword: string;
+  clusterTheme: string;
+  suggestions: AiKeywordExpansionItem[];
+  marketOverview: string;
+  source: string;
+  latencyMs?: number;
+}
+
+export interface AiRankingInsight {
+  keyword: string;
+  currentRank: number;
+  previousRank: number;
+  rankChange: number;
+  urgency: '高危' | '中度' | '轻微' | '正向增长';
+  causeDiagnosis: string;
+  actionRecommendation: string;
+}
+
+export interface AiRankingDiagnosticResult {
+  siteName: string;
+  domain: string;
+  overallHealthScore: number;
+  volatilityLevel: '高频波动' | '温和调整' | '平稳上行';
+  algorithmUpdateSuspected: boolean;
+  algorithmNotes: string;
+  summary: string;
+  insights: AiRankingInsight[];
+  strategicPriorities: string[];
+  source: string;
+  latencyMs?: number;
+}
+
+export interface AiApiLogItem {
+  id: string;
+  timestamp: string;
+  endpoint: string;
+  method: string;
+  status: '200 OK' | 'Fallback 200' | '500 Error';
+  model: string;
+  latencyMs: number;
+  requestSummary: string;
+  responseSummary: string;
+}
+
+// ================= 多大模型 (Multi-LLM) 网关与服务商接入体系 =================
+export type LlmProviderId =
+  | 'gemini'
+  | 'openai'
+  | 'deepseek'
+  | 'claude'
+  | 'qwen'
+  | 'kimi'
+  | 'glm'
+  | 'custom';
+
+export interface LlmModelInfo {
+  id: string;
+  name: string;
+  providerId: LlmProviderId;
+  contextWindow: string;
+  specialty: string;
+  isDefault?: boolean;
+  supportsReasoning?: boolean;
+  recommendedFor?: ('content' | 'geo' | 'keywords' | 'rankings')[];
+}
+
+export interface LlmProviderInfo {
+  id: LlmProviderId;
+  name: string;
+  company: string;
+  badge: string;
+  color: string;
+  status: 'connected' | 'configured' | 'simulated';
+  pingMs: number;
+  description: string;
+  models: LlmModelInfo[];
+  activeModel: string;
+  hasApiKey: boolean;
+  baseUrl?: string;
+  keyMask?: string;
+  docsUrl?: string;
+}
+
+export interface LlmProviderConfig {
+  providerId: LlmProviderId;
+  apiKey: string;
+  baseUrl?: string;
+  customModel?: string;
+}
+
+export interface LlmBenchmarkItemResult {
+  modelId: string;
+  modelName: string;
+  providerId: LlmProviderId;
+  latencyMs: number;
+  score: number;
+  ratingLabel: string;
+  keyInsight: string;
+  reasoningChain?: string;
+  rawSummary: string;
+  sampleTokens?: number;
+}
+
+export interface LlmBenchmarkCompareResult {
+  benchmarkId: string;
+  timestamp: string;
+  targetDomain: string;
+  taskType: 'content_quality' | 'geo_simulation' | 'ranking_attribution';
+  promptOrSubject: string;
+  modelsCompared: LlmBenchmarkItemResult[];
+}
+

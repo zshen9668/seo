@@ -10,12 +10,13 @@ import {
   Sparkles,
   ChevronRight,
   Sliders,
+  Cpu,
 } from 'lucide-react';
 import { Website } from '../types/seo';
 
 interface SidebarProps {
-  currentTab: 'rankings' | 'audit' | 'research' | 'sites' | 'geo';
-  onSelectTab: (tab: 'rankings' | 'audit' | 'research' | 'sites' | 'geo') => void;
+  currentTab: 'rankings' | 'audit' | 'research' | 'sites' | 'geo' | 'ai_hub';
+  onSelectTab: (tab: 'rankings' | 'audit' | 'research' | 'sites' | 'geo' | 'ai_hub') => void;
   activeSite: Website;
   unresolvedIssuesCount: number;
 }
@@ -61,6 +62,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: Search,
       badge: '竞品差距',
       badgeColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    },
+    {
+      id: 'ai_hub' as const,
+      label: 'AI API 分析接入',
+      sublabel: 'Gemini 3.8 Flash 全链路中枢',
+      icon: Cpu,
+      badge: '在线 3.8',
+      badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     },
     {
       id: 'sites' as const,

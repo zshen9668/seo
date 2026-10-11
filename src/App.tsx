@@ -20,9 +20,11 @@ import { AutomatedAuditView } from './components/AutomatedAuditView';
 import { KeywordResearchView } from './components/KeywordResearchView';
 import { MultiSiteMatrixView } from './components/MultiSiteMatrixView';
 import { GeoControlView } from './components/GeoControlView';
+import { AiApiHubView } from './components/AiApiHubView';
+import { generateRealistic30DayHistory } from './utils/seoChartUtils';
 import { AddKeywordModal } from './components/Modals/AddKeywordModal';
 import { AddSiteModal } from './components/Modals/AddSiteModal';
-import { TrendingUp, ShieldCheck, Search, Globe, Sparkles } from 'lucide-react';
+import { TrendingUp, ShieldCheck, Search, Globe, Sparkles, Cpu } from 'lucide-react';
 
 export default function App() {
   const [websites, setWebsites] = useState<Website[]>(() => {
@@ -46,7 +48,7 @@ export default function App() {
 
   // Navigation tab
   const [currentTab, setCurrentTab] = useState<
-    'rankings' | 'geo' | 'audit' | 'research' | 'sites'
+    'rankings' | 'geo' | 'audit' | 'research' | 'sites' | 'ai_hub'
   >('rankings');
 
   // Trigger states
@@ -84,10 +86,10 @@ export default function App() {
           const newRank = Math.max(1, kw.currentRank - shift);
           const rankChange = kw.currentRank - newRank;
 
-          const updatedHistory = [
-            ...kw.history.slice(1),
-            { date: '10-10', rank: newRank },
-          ];
+          const lastDate = kw.history.length > 0 ? kw.history[kw.history.length - 1].date : '10-11';
+          const updatedHistory = kw.history.length > 0
+            ? [...kw.history.slice(0, -1), { date: lastDate, rank: newRank }]
+            : generateRealistic30DayHistory(newRank, kw.currentRank, kw.id);
 
           return {
             ...kw,
@@ -234,14 +236,11 @@ export default function App() {
     newKwData: Omit<TrackedKeyword, 'id' | 'updatedAt' | 'history'>
   ) => {
     const initialRank = newKwData.currentRank;
-    const history = [
-      { date: '09-15', rank: initialRank + 6 },
-      { date: '09-20', rank: initialRank + 5 },
-      { date: '09-25', rank: initialRank + 3 },
-      { date: '09-30', rank: initialRank + 2 },
-      { date: '10-05', rank: initialRank + 1 },
-      { date: '10-10', rank: initialRank },
-    ];
+    const history = generateRealistic30DayHistory(
+      initialRank,
+      newKwData.previousRank || initialRank + 3,
+      newKwData.keyword
+    );
 
     const newKeyword: TrackedKeyword = {
       ...newKwData,
@@ -373,6 +372,14 @@ export default function App() {
                 onSelectTab={setCurrentTab}
               />
             )}
+
+            {currentTab === 'ai_hub' && (
+              <AiApiHubView
+                activeSite={activeSite}
+                keywords={keywords}
+                onNavigateTab={setCurrentTab}
+              />
+            )}
           </div>
         </main>
       </div>
@@ -407,6 +414,16 @@ export default function App() {
         >
           <ShieldCheck className="w-4 h-4" />
           <span>全站体检</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentTab('ai_hub')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-medium transition-colors ${
+            currentTab === 'ai_hub' ? 'text-emerald-400 font-bold' : 'text-slate-400'
+          }`}
+        >
+          <Cpu className="w-4 h-4" />
+          <span>AI接入</span>
         </button>
 
         <button

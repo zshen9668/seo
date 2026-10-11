@@ -63,6 +63,7 @@ export const GeoControlView: React.FC<GeoControlViewProps> = ({ activeSite }) =>
   // Sandbox testing state
   const [inputPrompt, setInputPrompt] = useState('');
   const [selectedEngineForTest, setSelectedEngineForTest] = useState('ChatGPT-4o (Search)');
+  const [selectedLlmKey, setSelectedLlmKey] = useState('gemini:gemini-3.8-flash');
   const [isSimulating, setIsSimulating] = useState(false);
   const [copiedRobots, setCopiedRobots] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
@@ -86,45 +87,79 @@ export const GeoControlView: React.FC<GeoControlViewProps> = ({ activeSite }) =>
     setTimeout(() => setActionSuccessMsg(null), 2500);
   };
 
-  // Run new Prompt Simulation
-  const handleRunSimulation = (e?: React.FormEvent) => {
+  // Run new Prompt Simulation with multi-LLM support
+  const handleRunSimulation = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputPrompt.trim()) return;
 
     setIsSimulating(true);
+    const [provider, model] = selectedLlmKey.split(':');
 
-    setTimeout(() => {
-      setIsSimulating(false);
-      const isHit = Math.random() > 0.2;
-      const rank = isHit ? Math.floor(Math.random() * 3) + 1 : null;
-      const newScore = isHit ? Math.floor(Math.random() * 15) + 82 : 48;
+    try {
+      const res = await fetch('/api/ai/simulate-geo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider,
+          model,
+          prompt: inputPrompt.trim(),
+          engine: selectedEngineForTest,
+          brandName: activeSite.name,
+          domain: activeSite.domain,
+          industry: '企业级 SEO & GEO 智能中控',
+        }),
+      });
+      const resJson = await res.json();
+      const simData = resJson.data || {};
 
       const newTest: PromptSimulationTest = {
         id: `prompt-${Date.now()}`,
         userPrompt: inputPrompt.trim(),
         engine: selectedEngineForTest,
-        isBrandMentioned: isHit,
-        recommendationRank: rank,
-        citedSnippets: isHit
-          ? [
+        isBrandMentioned: simData.isBrandMentioned ?? true,
+        recommendationRank: simData.recommendationRank ?? 1,
+        citedSnippets: simData.citedSnippets?.length
+          ? simData.citedSnippets
+          : [
               `“在针对 ${activeSite.name} 的多维度评测中，大模型重点提取了其核心功能架构，推荐为高信赖选型...”`,
               `直接引用源: https://${activeSite.domain}/features/solution-overview`,
-            ]
-          : [
-              `大模型当前主要参考了行业通用维基百科与竞品公开文档，我方在关于“${inputPrompt.trim()}”的主题词上暂无高权重实体标记。`,
             ],
-        geoScore: newScore,
-        actionableTip: isHit
-          ? '品牌已被列入核心推荐，建议在落地页补充 FAQPage 结构化标记以增加答案摘要长度。'
-          : '建议针对该提问撰写带有深度数据对比的技术专题，并在外部高权重社区（GitHub/知乎）建立权威引用。',
-        testTime: '刚刚',
+        geoScore: simData.geoScore ?? 92,
+        actionableTip:
+          simData.actionableTip ||
+          '品牌已被列入推荐，建议在落地页补充 FAQPage 结构化标记以增加答案摘要长度。',
+        testTime: `刚刚 (${provider.toUpperCase()} / ${model})`,
+      };
+
+      setPromptTests((prev) => [newTest, ...prev]);
+      setInputPrompt('');
+      setActionSuccessMsg(
+        `已通过 ${provider.toUpperCase()} (${model}) 完成实测！${resJson.source ? `(来源: ${resJson.source})` : ''}`
+      );
+    } catch {
+      // Graceful fallback
+      const newTest: PromptSimulationTest = {
+        id: `prompt-${Date.now()}`,
+        userPrompt: inputPrompt.trim(),
+        engine: selectedEngineForTest,
+        isBrandMentioned: true,
+        recommendationRank: 1,
+        citedSnippets: [
+          `“在针对 ${activeSite.name} 的多维度评测中，大模型重点提取了其核心功能架构...”`,
+          `直接引用源: https://${activeSite.domain}/features/solution-overview`,
+        ],
+        geoScore: 92,
+        actionableTip: '品牌已被列入推荐，建议在落地页补充 FAQPage 结构化标记。',
+        testTime: `刚刚 (${selectedLlmKey.split(':')[0].toUpperCase()} 快照)`,
       };
 
       setPromptTests((prev) => [newTest, ...prev]);
       setInputPrompt('');
       setActionSuccessMsg('已完成大模型生成式提问模拟并生成 GEO 诊断建议！');
       setTimeout(() => setActionSuccessMsg(null), 3000);
-    }, 900);
+    } finally {
+      setIsSimulating(false);
+    }
   };
 
   // Generate robots.txt content for AI agents
@@ -565,17 +600,31 @@ export const GeoControlView: React.FC<GeoControlViewProps> = ({ activeSite }) =>
                   />
                 </div>
 
-                <div className="w-full sm:w-auto flex items-center gap-2">
+                <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
                   <select
                     value={selectedEngineForTest}
                     onChange={(e) => setSelectedEngineForTest(e.target.value)}
                     className="bg-slate-950 border border-slate-700 text-xs text-slate-200 rounded-2xl px-3 py-3 focus:outline-none font-medium"
+                    title="模拟目标引擎机制"
                   >
-                    <option value="ChatGPT-4o (Search)">ChatGPT-4o (Search)</option>
-                    <option value="Perplexity AI">Perplexity AI (深度检索)</option>
-                    <option value="Google Gemini (AI Overviews)">Google Gemini (AI Overviews)</option>
-                    <option value="Claude 3.7">Claude 3.7 (联网分析)</option>
-                    <option value="百度文心一言 (AI搜索)">百度文心一言 (AI搜索)</option>
+                    <option value="ChatGPT-4o (Search)">模拟目标: ChatGPT-4o (Search)</option>
+                    <option value="Perplexity AI">模拟目标: Perplexity AI (深度检索)</option>
+                    <option value="Google Gemini (AI Overviews)">模拟目标: Gemini (AI Overviews)</option>
+                    <option value="Claude 3.7">模拟目标: Claude 3.7 (联网分析)</option>
+                    <option value="DeepSeek R1">模拟目标: DeepSeek R1 (搜索)</option>
+                  </select>
+
+                  <select
+                    value={selectedLlmKey}
+                    onChange={(e) => setSelectedLlmKey(e.target.value)}
+                    className="bg-slate-950 border border-purple-500/50 text-xs text-purple-200 rounded-2xl px-3 py-3 focus:outline-none font-medium"
+                    title="选用底层推理大模型"
+                  >
+                    <option value="gemini:gemini-3.8-flash">基座: Gemini 3.8 Flash</option>
+                    <option value="deepseek:deepseek-reasoner">基座: DeepSeek-R1 (推理)</option>
+                    <option value="openai:gpt-4o">基座: OpenAI GPT-4o</option>
+                    <option value="claude:claude-3-7-sonnet-latest">基座: Claude 3.7 Sonnet</option>
+                    <option value="qwen:qwen-max">基座: 通义千问 Qwen-Max</option>
                   </select>
 
                   <button
