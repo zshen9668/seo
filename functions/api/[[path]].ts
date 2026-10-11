@@ -1,6 +1,5 @@
 /**
  * Cloudflare Pages catch-all for /api/*
- * Avoid importing @cloudflare/workers-types (not in package.json).
  */
 import {
   buildProvidersList,
@@ -14,10 +13,14 @@ import {
   resolveDefaultProvider,
   type EnvKeys,
 } from '../_shared/llm';
+import { attemptLogin, parseBearer, verifyToken } from '../_shared/auth';
 
 type PagesContext = {
   request: Request;
-  env: EnvKeys;
+  env: EnvKeys & {
+    AUTH_DEMO_EMAIL?: string;
+    AUTH_DEMO_PASSWORD?: string;
+  };
   params: Record<string, string | string[]>;
   waitUntil: (p: Promise<unknown>) => void;
   next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
@@ -90,6 +93,37 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
   const method = request.method.toUpperCase();
 
   try {
+    // ---- Auth ----
+    if (method === 'POST' && key === 'auth/login') {
+      const body = await bodyOf(request);
+      const email = String(body.email || '');
+      const password = String(body.password || '');
+      const result = attemptLogin(email, password, env);
+      if (!result.success) return json({ success: false, error: result.error }, 401);
+      return json({ success: true, session: result.session });
+    }
+
+    if (method === 'POST' && key === 'auth/logout') {
+      return json({ success: true });
+    }
+
+    if (method === 'GET' && key === 'auth/me') {
+      const token = parseBearer(request);
+      if (!token) return json({ success: false, error: '未登录' }, 401);
+      const v = verifyToken(token);
+      if (!v.ok) return json({ success: false, error: '会话无效或已过期' }, 401);
+      return json({
+        success: true,
+        user: {
+          id: v.userId || 'u-demo-admin',
+          email: v.email || 'admin@seopilot.local',
+          name: '管理员',
+          role: 'admin',
+          avatarInitials: '管',
+        },
+      });
+    }
+
     if (method === 'GET' && (key === 'ai/providers' || key === 'providers')) {
       return json(buildProvidersList(env));
     }
@@ -107,6 +141,7 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
         lastChecked: new Date().toISOString().replace('T', ' ').substring(0, 19),
         defaults: resolveDefaultProvider(env),
         supportedEndpoints: [
+          { endpoint: '/api/auth/login', method: 'POST', status: 'active' },
           { endpoint: '/api/ai/analyze-content', method: 'POST', status: 'active' },
           { endpoint: '/api/ai/simulate-geo', method: 'POST', status: 'active' },
           { endpoint: '/api/ai/expand-keywords', method: 'POST', status: 'active' },
