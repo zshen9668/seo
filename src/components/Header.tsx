@@ -25,6 +25,24 @@ interface HeaderProps {
   onLogout?: () => void;
 }
 
+function Avatar({ user }: { user: AuthUser }) {
+  if (user.avatarUrl) {
+    return (
+      <img
+        src={user.avatarUrl}
+        alt=""
+        className="w-7 h-7 rounded-lg object-cover"
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+  return (
+    <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-300 flex items-center justify-center font-bold text-[11px]">
+      {user.avatarInitials}
+    </span>
+  );
+}
+
 export const Header: React.FC<HeaderProps> = ({
   websites,
   activeSite,
@@ -49,10 +67,18 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
 
+  const providerLabel =
+    user?.provider === 'github'
+      ? 'GitHub'
+      : user?.provider === 'google'
+        ? 'Google'
+        : user?.provider === 'demo'
+          ? '演示账号'
+          : user?.role || '';
+
   return (
     <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 sm:px-4 lg:px-6 py-2.5 safe-top">
       <div className="flex flex-col gap-2.5 sm:gap-0 sm:flex-row sm:items-center sm:justify-between">
-        {/* Row 1: brand + user */}
         <div className="flex items-center justify-between gap-2 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 p-0.5 shadow-lg shadow-indigo-500/20 flex items-center justify-center">
@@ -79,35 +105,36 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* User chip (mobile-friendly) */}
           {user && (
             <div className="relative shrink-0" ref={menuRef}>
               <button
                 type="button"
                 onClick={() => setMenuOpen((v) => !v)}
                 className="flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-xl bg-slate-950 border border-slate-700 hover:border-slate-600 text-xs"
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
               >
-                <span className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-300 flex items-center justify-center font-bold text-[11px]">
-                  {user.avatarInitials}
-                </span>
-                <span className="hidden xs:inline sm:inline max-w-[72px] truncate text-slate-300">
-                  {user.name}
-                </span>
+                <Avatar user={user} />
+                <span className="hidden sm:inline max-w-[72px] truncate text-slate-300">{user.name}</span>
                 <ChevronDown className="w-3 h-3 text-slate-500" />
               </button>
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-52 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 py-1 text-xs overflow-hidden">
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-1.5 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 py-1 text-xs overflow-hidden"
+                >
                   <div className="px-3 py-2 border-b border-slate-800">
                     <div className="font-semibold text-slate-100 flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5" />
-                      {user.name}
+                      <User className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{user.name}</span>
                     </div>
                     <div className="text-slate-500 font-mono mt-0.5 truncate">{user.email}</div>
-                    <div className="text-indigo-400 mt-1">{user.role}</div>
+                    <div className="text-indigo-400 mt-1">{providerLabel}</div>
                   </div>
                   {onLogout && (
                     <button
                       type="button"
+                      role="menuitem"
                       onClick={() => {
                         setMenuOpen(false);
                         onLogout();
@@ -124,7 +151,6 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Row 2: site switcher + actions */}
         <div className="flex items-center gap-2 min-w-0">
           <div className="relative flex-1 sm:flex-none min-w-0">
             <select
@@ -192,7 +218,9 @@ export const Header: React.FC<HeaderProps> = ({
               className="hidden sm:flex items-center gap-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl border border-slate-700 transition-colors disabled:opacity-60"
               title="全站体检"
             >
-              <ShieldCheck className={`w-3.5 h-3.5 text-emerald-400 ${isAuditing ? 'animate-pulse' : ''}`} />
+              <ShieldCheck
+                className={`w-3.5 h-3.5 text-emerald-400 ${isAuditing ? 'animate-pulse' : ''}`}
+              />
               <span>{isAuditing ? '体检中…' : '全站体检'}</span>
             </button>
 
