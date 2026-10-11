@@ -10,6 +10,7 @@ import {
   Flame,
   Award,
   Zap,
+  Sparkles,
 } from 'lucide-react';
 import { Website, TrackedKeyword, AuditIssue, CompetitorKeywordOverlap } from '../types/seo';
 
@@ -19,7 +20,7 @@ interface GlobalSearchBarProps {
   auditIssues: AuditIssue[];
   competitorGaps: CompetitorKeywordOverlap[];
   onSelectSite: (site: Website) => void;
-  onNavigateTab: (tab: 'rankings' | 'audit' | 'research' | 'sites') => void;
+  onNavigateTab: (tab: 'rankings' | 'audit' | 'research' | 'sites' | 'geo') => void;
   onSelectKeywordSearch?: (keywordText: string) => void;
 }
 
@@ -99,11 +100,19 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       )
     : [];
 
+  const isGeoMatched = Boolean(
+    cleanQuery &&
+      ['geo', 'ai', 'chatgpt', 'perplexity', 'gemini', 'claude', '大模型', '生成式', '爬虫', 'hreflang', '地域', '全球', 'gpt', '文心'].some(
+        (k) => cleanQuery.includes(k)
+      )
+  );
+
   const hasResults =
     matchedKeywords.length > 0 ||
     matchedIssues.length > 0 ||
     matchedWebsites.length > 0 ||
-    matchedGaps.length > 0;
+    matchedGaps.length > 0 ||
+    isGeoMatched;
 
   return (
     <div ref={containerRef} className="relative w-full z-30 mb-6">
@@ -117,7 +126,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          placeholder="全局跨库搜索：监控词、SEO体检缺陷、托管站点或竞品差距 (快捷键 ⌘K / Ctrl+K)..."
+          placeholder="全局跨库搜索：监控词、GEO大模型引用、SEO体检缺陷、托管站点或竞品差距 (快捷键 ⌘K / Ctrl+K)..."
           className="w-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 focus:border-indigo-500 rounded-2xl pl-11 pr-24 py-3 text-xs sm:text-sm text-white placeholder-slate-500 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
         />
 
@@ -269,6 +278,41 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                         </div>
                       </button>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* GEO Section */}
+              {isGeoMatched && (
+                <div className="pt-2 border-t border-slate-800/60">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-purple-400" />
+                      GEO 生成式引擎优化 & 全球地域定向
+                    </span>
+                    <span className="text-slate-500 text-[9px]">直达 GEO 智能中控</span>
+                  </div>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        onNavigateTab('geo');
+                        setIsOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left bg-purple-950/30 hover:bg-purple-900/40 border border-purple-500/30 transition-colors group text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white group-hover:text-purple-200">
+                          打开 GEO 智能中控（大模型引用、AI爬虫与全球SERP）
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">
+                          ChatGPT / Perplexity / Gemini
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 font-mono text-purple-300">
+                        <span>查看大模型引用率</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      </div>
+                    </button>
                   </div>
                 </div>
               )}

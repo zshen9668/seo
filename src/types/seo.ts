@@ -130,3 +130,76 @@ export interface CompetitorProfile {
   overlapKeywordsCount: number;
   missedOpportunitiesCount: number;
 }
+
+// ================= GEO 中控功能核心数据结构 =================
+export interface AiEngineMetric {
+  engine: 'ChatGPT' | 'Perplexity' | 'Google Gemini' | 'Claude' | '百度文心AI';
+  citationRate: number; // 引用推荐率 %
+  mentionCount: number; // 月度被引用/推荐次数
+  sentimentScore: number; // 正面好评率 %
+  topCitedUrls: string[];
+  status: 'highly_recommended' | 'moderate' | 'needs_boost';
+  marketShare: string;
+}
+
+export interface AiBotStatus {
+  botName: string;
+  company: string;
+  userAgent: string;
+  isAllowed: boolean;
+  crawlsLast24h: number;
+  lastCrawledAt: string;
+  impactNote: string;
+  policy: 'allow' | 'disallow' | 'conditional';
+}
+
+export interface GeoRegionRanking {
+  regionCode: string; // US, CN, UK, DE, JP, SG
+  regionName: string; // 美国, 中国, 英国, 德国, 日本, 新加坡
+  flagEmoji: string;
+  rank: number;
+  searchEngine: string;
+  searchVolume: number;
+  serpFeatures: string[];
+  latencyMs: number;
+  marketTrafficShare: number; // %
+}
+
+export interface GeoKeywordItem {
+  id: string;
+  keyword: string;
+  category: string;
+  regionalRanks: GeoRegionRanking[];
+}
+
+export interface PromptSimulationTest {
+  id: string;
+  userPrompt: string;
+  engine: string;
+  isBrandMentioned: boolean;
+  recommendationRank: number | null; // e.g. #1
+  citedSnippets: string[];
+  geoScore: number; // 0-100 GEO指数
+  actionableTip: string;
+  testTime: string;
+}
+
+export interface HreflangCheckItem {
+  id: string;
+  url: string;
+  targetLang: string;
+  region: string;
+  hasSelfRef: boolean;
+  hasReturnTag: boolean;
+  status: 'pass' | 'warning' | 'error';
+  issueDesc?: string;
+}
+
+export interface EdgePopNode {
+  city: string;
+  country: string;
+  latencyMs: number;
+  ttfbMs: number;
+  status: 'optimal' | 'warning' | 'degraded';
+  cdnProvider: string;
+}

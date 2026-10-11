@@ -16,7 +16,7 @@ interface MultiSiteMatrixViewProps {
   websites: Website[];
   onSelectSite: (site: Website) => void;
   onOpenAddSite: () => void;
-  onSelectTab: (tab: 'rankings' | 'audit' | 'research') => void;
+  onSelectTab: (tab: 'rankings' | 'audit' | 'research' | 'geo') => void;
 }
 
 export const MultiSiteMatrixView: React.FC<MultiSiteMatrixViewProps> = ({
@@ -190,6 +190,16 @@ export const MultiSiteMatrixView: React.FC<MultiSiteMatrixViewProps> = ({
                   className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white transition-colors"
                 >
                   排位雷达
+                </button>
+
+                <button
+                  onClick={() => {
+                    onSelectSite(site);
+                    onSelectTab('geo');
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white transition-colors"
+                >
+                  GEO中控
                 </button>
 
                 <button

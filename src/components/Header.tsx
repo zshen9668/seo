@@ -56,11 +56,11 @@ export const Header: React.FC<HeaderProps> = ({
               </h1>
               <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                爬虫雷达在线
+                爬虫与GEO雷达在线
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden md:block">
-              多站点策略管理 • SERP实时排名雷达 • 自动化技术体检 • 竞品差距透视
+              多站点策略管理 • SERP实时排名雷达 • GEO大模型优化 • 自动化技术体检 • 竞品差距透视
             </p>
           </div>
         </div>

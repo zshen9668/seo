@@ -14,8 +14,8 @@ import {
 import { Website } from '../types/seo';
 
 interface SidebarProps {
-  currentTab: 'rankings' | 'audit' | 'research' | 'sites';
-  onSelectTab: (tab: 'rankings' | 'audit' | 'research' | 'sites') => void;
+  currentTab: 'rankings' | 'audit' | 'research' | 'sites' | 'geo';
+  onSelectTab: (tab: 'rankings' | 'audit' | 'research' | 'sites' | 'geo') => void;
   activeSite: Website;
   unresolvedIssuesCount: number;
 }
@@ -34,6 +34,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: TrendingUp,
       badge: `${activeSite.totalTrackedKeywords} 个词`,
       badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    },
+    {
+      id: 'geo' as const,
+      label: 'GEO 智能中控',
+      sublabel: 'AI引擎优化与全球地域定向',
+      icon: Sparkles,
+      badge: 'AI & 地域',
+      badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
     },
     {
       id: 'audit' as const,

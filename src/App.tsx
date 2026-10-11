@@ -17,9 +17,10 @@ import { KeywordPerformanceView } from './components/KeywordPerformanceView';
 import { AutomatedAuditView } from './components/AutomatedAuditView';
 import { KeywordResearchView } from './components/KeywordResearchView';
 import { MultiSiteMatrixView } from './components/MultiSiteMatrixView';
+import { GeoControlView } from './components/GeoControlView';
 import { AddKeywordModal } from './components/Modals/AddKeywordModal';
 import { AddSiteModal } from './components/Modals/AddSiteModal';
-import { TrendingUp, ShieldCheck, Search, Globe } from 'lucide-react';
+import { TrendingUp, ShieldCheck, Search, Globe, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [websites, setWebsites] = useState<Website[]>(() => {
@@ -43,7 +44,7 @@ export default function App() {
 
   // Navigation tab
   const [currentTab, setCurrentTab] = useState<
-    'rankings' | 'audit' | 'research' | 'sites'
+    'rankings' | 'geo' | 'audit' | 'research' | 'sites'
   >('rankings');
 
   // Trigger states
@@ -246,6 +247,10 @@ export default function App() {
               />
             )}
 
+            {currentTab === 'geo' && (
+              <GeoControlView activeSite={activeSite} />
+            )}
+
             {currentTab === 'audit' && (
               <AutomatedAuditView
                 report={auditReport}
@@ -277,7 +282,7 @@ export default function App() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-3 py-2 flex items-center justify-around">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-2 py-2 flex items-center justify-around">
         <button
           onClick={() => setCurrentTab('rankings')}
           className={`flex flex-col items-center gap-1 text-[10px] font-medium transition-colors ${
@@ -286,6 +291,16 @@ export default function App() {
         >
           <TrendingUp className="w-4 h-4" />
           <span>排名雷达</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentTab('geo')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-medium transition-colors ${
+            currentTab === 'geo' ? 'text-purple-400 font-bold' : 'text-slate-400'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>GEO中控</span>
         </button>
 
         <button
