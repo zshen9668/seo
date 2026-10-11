@@ -5,7 +5,7 @@ export interface Website {
   category: 'SaaS云平台' | '跨境电商' | '技术博客/资讯' | '企业官网门户' | '垂直矩阵站';
   status: 'healthy' | 'warning' | 'critical';
   healthScore: number;
-  domainRating: number; // 0-100 DR
+  domainRating: number;
   monthlyOrganicVisits: number;
   monthlyVisitsGrowth: number;
   totalTrackedKeywords: number;
@@ -19,7 +19,7 @@ export interface Website {
 
 export interface HistoricalRankPoint {
   date: string;
-  [keywordId: string]: number | string; // rank number (1-100)
+  [keywordId: string]: number | string;
 }
 
 export interface TrackedKeyword {
@@ -27,11 +27,11 @@ export interface TrackedKeyword {
   siteId: string;
   keyword: string;
   searchEngine: 'Google' | 'Bing' | 'Baidu';
-  currentRank: number; // 1-100
+  currentRank: number;
   previousRank: number;
-  rankChange: number; // positive = rose (improved rank)
+  rankChange: number;
   searchVolume: number;
-  difficulty: number; // 0-100 KD
+  difficulty: number;
   cpc: number;
   intent: '商业调研' | '交易购买' | '信息查询' | '品牌导航';
   serpFeatures: string[];
@@ -54,7 +54,7 @@ export interface AuditIssue {
   title: string;
   category: AuditCategory;
   priority: AuditPriority;
-  impactScore: number; // 1-100
+  impactScore: number;
   effort: '快速修复' | '中度工程' | '复杂架构';
   affectedUrlsCount: number;
   sampleUrls: string[];
@@ -62,15 +62,15 @@ export interface AuditIssue {
   recommendation: string;
   codeSnippet?: string;
   isResolved: boolean;
-  resolvedAt?: string; // 修复时间 e.g. '2026-08-28'
-  resolvedDaysAgo?: number; // 距今修复已过去的天数
-  isArchived?: boolean; // 是否已移入离线存档
-  archivedAt?: string; // 归档时间
+  resolvedAt?: string;
+  resolvedDaysAgo?: number;
+  isArchived?: boolean;
+  archivedAt?: string;
 }
 
 export interface AutoArchiveConfig {
   enabled: boolean;
-  daysThreshold: number; // 默认 30 天
+  daysThreshold: number;
   frequency: 'realtime' | 'daily' | 'weekly';
   autoCompressHistory: boolean;
 }
@@ -114,10 +114,10 @@ export interface KeywordSuggestion {
   id: string;
   keyword: string;
   searchVolume: number;
-  difficulty: number; // 0-100
+  difficulty: number;
   cpc: number;
   intent: '商业调研' | '交易购买' | '信息查询' | '品牌导航';
-  trendGrowth: number; // % change
+  trendGrowth: number;
   serpFeatures: string[];
   competitionLevel: '低' | '中' | '高';
 }
@@ -127,7 +127,7 @@ export interface CompetitorKeywordOverlap {
   searchVolume: number;
   difficulty: number;
   cpc: number;
-  ourRank: number | null; // null if unranked
+  ourRank: number | null;
   competitorRank: number;
   competitorDomain: string;
   gapOpportunity: '重大差距' | '势均力敌' | '我方领先' | '快速突破';
@@ -142,12 +142,11 @@ export interface CompetitorProfile {
   missedOpportunitiesCount: number;
 }
 
-// ================= GEO 中控功能核心数据结构 =================
 export interface AiEngineMetric {
   engine: 'ChatGPT' | 'Perplexity' | 'Google Gemini' | 'Claude' | '百度文心AI';
-  citationRate: number; // 引用推荐率 %
-  mentionCount: number; // 月度被引用/推荐次数
-  sentimentScore: number; // 正面好评率 %
+  citationRate: number;
+  mentionCount: number;
+  sentimentScore: number;
   topCitedUrls: string[];
   status: 'highly_recommended' | 'moderate' | 'needs_boost';
   marketShare: string;
@@ -165,15 +164,15 @@ export interface AiBotStatus {
 }
 
 export interface GeoRegionRanking {
-  regionCode: string; // US, CN, UK, DE, JP, SG
-  regionName: string; // 美国, 中国, 英国, 德国, 日本, 新加坡
+  regionCode: string;
+  regionName: string;
   flagEmoji: string;
   rank: number;
   searchEngine: string;
   searchVolume: number;
   serpFeatures: string[];
   latencyMs: number;
-  marketTrafficShare: number; // %
+  marketTrafficShare: number;
 }
 
 export interface GeoKeywordItem {
@@ -188,9 +187,9 @@ export interface PromptSimulationTest {
   userPrompt: string;
   engine: string;
   isBrandMentioned: boolean;
-  recommendationRank: number | null; // e.g. #1
+  recommendationRank: number | null;
   citedSnippets: string[];
-  geoScore: number; // 0-100 GEO指数
+  geoScore: number;
   actionableTip: string;
   testTime: string;
 }
@@ -215,7 +214,6 @@ export interface EdgePopNode {
   cdnProvider: string;
 }
 
-// ================= AI驱动内容质量分析 (Gemini API 增强) =================
 export interface AiKeywordDensityItem {
   keyword: string;
   frequency: number;
@@ -279,7 +277,6 @@ export interface AiContentQualityAnalysisResult {
   recommendations: AiContentRecommendation[];
 }
 
-// ================= AI API 分析接入中枢与各模块接入类型 =================
 export interface AiApiStatus {
   status: 'online' | 'degraded' | 'simulated';
   model: string;
@@ -373,7 +370,7 @@ export interface AiApiLogItem {
   responseSummary: string;
 }
 
-// ================= 多大模型 (Multi-LLM) 网关与服务商接入体系 =================
+/** 含免费层 siliconflow / groq */
 export type LlmProviderId =
   | 'gemini'
   | 'openai'
@@ -382,6 +379,8 @@ export type LlmProviderId =
   | 'qwen'
   | 'kimi'
   | 'glm'
+  | 'siliconflow'
+  | 'groq'
   | 'custom';
 
 export interface LlmModelInfo {
@@ -392,6 +391,7 @@ export interface LlmModelInfo {
   specialty: string;
   isDefault?: boolean;
   supportsReasoning?: boolean;
+  freeTier?: boolean;
   recommendedFor?: ('content' | 'geo' | 'keywords' | 'rankings')[];
 }
 
@@ -410,6 +410,7 @@ export interface LlmProviderInfo {
   baseUrl?: string;
   keyMask?: string;
   docsUrl?: string;
+  freeTier?: boolean;
 }
 
 export interface LlmProviderConfig {
@@ -440,4 +441,3 @@ export interface LlmBenchmarkCompareResult {
   promptOrSubject: string;
   modelsCompared: LlmBenchmarkItemResult[];
 }
-
