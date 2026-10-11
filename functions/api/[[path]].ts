@@ -13,14 +13,26 @@ import {
   resolveDefaultProvider,
   type EnvKeys,
 } from '../_shared/llm';
-import { attemptLogin, parseBearer, verifyToken } from '../_shared/auth';
+import {
+  attemptLogin,
+  createOAuthState,
+  exchangeGithubCode,
+  exchangeGoogleCode,
+  getAppOrigin,
+  githubAuthorizeUrl,
+  googleAuthorizeUrl,
+  listOAuthProviders,
+  parseBearer,
+  redirectWithError,
+  redirectWithSession,
+  validateOAuthState,
+  verifyToken,
+  type AuthEnv,
+} from '../_shared/auth';
 
 type PagesContext = {
   request: Request;
-  env: EnvKeys & {
-    AUTH_DEMO_EMAIL?: string;
-    AUTH_DEMO_PASSWORD?: string;
-  };
+  env: EnvKeys & AuthEnv;
   params: Record<string, string | string[]>;
   waitUntil: (p: Promise<unknown>) => void;
   next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
@@ -91,9 +103,15 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
   const url = new URL(request.url);
   const key = routeKey(url.pathname);
   const method = request.method.toUpperCase();
+  const origin = getAppOrigin(request, env);
 
   try {
-    // ---- Auth ----
+    // ---- Auth: providers status ----
+    if (method === 'GET' && key === 'auth/providers') {
+      return json({ success: true, providers: listOAuthProviders(env) });
+    }
+
+    // ---- Auth: password login ----
     if (method === 'POST' && key === 'auth/login') {
       const body = await bodyOf(request);
       const email = String(body.email || '');
@@ -111,17 +129,70 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
       const token = parseBearer(request);
       if (!token) return json({ success: false, error: '未登录' }, 401);
       const v = verifyToken(token);
-      if (!v.ok) return json({ success: false, error: '会话无效或已过期' }, 401);
-      return json({
-        success: true,
-        user: {
-          id: v.userId || 'u-demo-admin',
-          email: v.email || 'admin@seopilot.local',
-          name: '管理员',
-          role: 'admin',
-          avatarInitials: '管',
-        },
-      });
+      if (!v.ok || !v.user) return json({ success: false, error: '会话无效或已过期' }, 401);
+      return json({ success: true, user: v.user });
+    }
+
+    // ---- OAuth: start ----
+    if (method === 'GET' && key === 'auth/oauth/github') {
+      const state = createOAuthState();
+      const authorize = githubAuthorizeUrl(env, origin, state);
+      if (!authorize) {
+        return json(
+          {
+            success: false,
+            error: '未配置 GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET',
+          },
+          503,
+        );
+      }
+      return Response.redirect(authorize, 302);
+    }
+
+    if (method === 'GET' && key === 'auth/oauth/google') {
+      const state = createOAuthState();
+      const authorize = googleAuthorizeUrl(env, origin, state);
+      if (!authorize) {
+        return json(
+          {
+            success: false,
+            error: '未配置 GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET',
+          },
+          503,
+        );
+      }
+      return Response.redirect(authorize, 302);
+    }
+
+    // ---- OAuth: callback ----
+    if (method === 'GET' && key === 'auth/oauth/callback/github') {
+      const err = url.searchParams.get('error');
+      if (err) return redirectWithError(origin, `GitHub: ${err}`);
+      const code = url.searchParams.get('code');
+      const state = url.searchParams.get('state') || '';
+      if (!code) return redirectWithError(origin, 'GitHub 未返回授权码');
+      if (!validateOAuthState(state)) return redirectWithError(origin, 'OAuth state 无效或已过期');
+      try {
+        const session = await exchangeGithubCode(code, env, origin);
+        return redirectWithSession(origin, session);
+      } catch (e: any) {
+        return redirectWithError(origin, e?.message || 'GitHub 登录失败');
+      }
+    }
+
+    if (method === 'GET' && key === 'auth/oauth/callback/google') {
+      const err = url.searchParams.get('error');
+      if (err) return redirectWithError(origin, `Google: ${err}`);
+      const code = url.searchParams.get('code');
+      const state = url.searchParams.get('state') || '';
+      if (!code) return redirectWithError(origin, 'Google 未返回授权码');
+      if (!validateOAuthState(state)) return redirectWithError(origin, 'OAuth state 无效或已过期');
+      try {
+        const session = await exchangeGoogleCode(code, env, origin);
+        return redirectWithSession(origin, session);
+      } catch (e: any) {
+        return redirectWithError(origin, e?.message || 'Google 登录失败');
+      }
     }
 
     if (method === 'GET' && (key === 'ai/providers' || key === 'providers')) {
@@ -142,11 +213,9 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
         defaults: resolveDefaultProvider(env),
         supportedEndpoints: [
           { endpoint: '/api/auth/login', method: 'POST', status: 'active' },
+          { endpoint: '/api/auth/oauth/github', method: 'GET', status: 'active' },
+          { endpoint: '/api/auth/oauth/google', method: 'GET', status: 'active' },
           { endpoint: '/api/ai/analyze-content', method: 'POST', status: 'active' },
-          { endpoint: '/api/ai/simulate-geo', method: 'POST', status: 'active' },
-          { endpoint: '/api/ai/expand-keywords', method: 'POST', status: 'active' },
-          { endpoint: '/api/ai/analyze-rankings', method: 'POST', status: 'active' },
-          { endpoint: '/api/ai/benchmark-compare', method: 'POST', status: 'active' },
           { endpoint: '/api/ai/providers', method: 'GET', status: 'active' },
         ],
       });
