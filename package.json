@@ -8,7 +8,9 @@
     "build": "vite build",
     "start": "tsx server.ts",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "pages:dev": "npm run build && wrangler pages dev dist --compatibility-date=2025-10-01",
+    "pages:deploy": "npm run build && wrangler pages deploy dist --project-name=seo-pilot"
   },
   "dependencies": {
     "@google/genai": "^2.28.0",
@@ -29,6 +31,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "tsx": "^4.23.15",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "wrangler": "^4.40.0"
   }
 }
