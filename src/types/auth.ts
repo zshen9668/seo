@@ -4,6 +4,8 @@ export interface AuthUser {
   name: string;
   role: 'admin' | 'editor' | 'viewer';
   avatarInitials: string;
+  provider?: 'demo' | 'github' | 'google';
+  avatarUrl?: string;
 }
 
 export interface AuthSession {
@@ -16,4 +18,10 @@ export interface LoginResponse {
   success: boolean;
   session?: AuthSession;
   error?: string;
+}
+
+export interface AuthProvidersStatus {
+  github: boolean;
+  google: boolean;
+  demo: boolean;
 }
