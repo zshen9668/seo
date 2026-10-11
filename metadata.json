@@ -1,0 +1,8 @@
+{
+  "name": "SEO Pilot",
+  "description": "企业级多站点SEO矩阵推广中控台，集成SERP实时排名雷达、自动化SEO深度体检及竞品关键词差距分析。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
